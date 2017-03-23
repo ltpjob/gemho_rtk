@@ -5,6 +5,7 @@
 #-------------------------------------------------
 
 QT       += core gui
+LIBS += -lpthread libwsock32 libws2_32 libwinmm
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -24,8 +25,59 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        mainwindow.cpp \
+    binex.c \
+    cmr.c \
+    convgpx.c \
+    convkml.c \
+    convrnx.c \
+    crescent.c \
+    datum.c \
+    download.c \
+    ephemeris.c \
+    geoid.c \
+    gis.c \
+    gw10.c \
+    ionex.c \
+    javad.c \
+    lambda.c \
+    novatel.c \
+    nvs.c \
+    options.c \
+    pntpos.c \
+    postpos.c \
+    ppp.c \
+    ppp_ar.c \
+    ppp_corr.c \
+    preceph.c \
+    qzslex.c \
+    rcvlex.c \
+    rcvraw.c \
+    rinex.c \
+    rt17.c \
+    rtcm.c \
+    rtcm2.c \
+    rtcm3.c \
+    rtcm3e.c \
+    rtkcmn.c \
+    rtkpos.c \
+    rtksvr.c \
+    sbas.c \
+    septentrio.c \
+    skytraq.c \
+    solution.c \
+    ss2.c \
+    stream.c \
+    streamsvr.c \
+    tides.c \
+    tle.c \
+    ublox.c \
+    userdef.c
 
-HEADERS  += mainwindow.h
+HEADERS  += mainwindow.h \
+    rtklib.h
 
 FORMS    += mainwindow.ui
+
+DISTFILES += \
+    gemho_rtk.pro.user
