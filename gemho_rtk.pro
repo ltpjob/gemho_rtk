@@ -26,56 +26,59 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    binex.c \
-    cmr.c \
-    convgpx.c \
-    convkml.c \
-    convrnx.c \
-    crescent.c \
-    datum.c \
-    download.c \
-    ephemeris.c \
-    geoid.c \
-    gis.c \
-    gw10.c \
-    ionex.c \
-    javad.c \
-    lambda.c \
-    novatel.c \
-    nvs.c \
-    options.c \
-    pntpos.c \
-    postpos.c \
-    ppp.c \
-    ppp_ar.c \
-    ppp_corr.c \
-    preceph.c \
-    qzslex.c \
-    rcvlex.c \
-    rcvraw.c \
-    rinex.c \
-    rt17.c \
-    rtcm.c \
-    rtcm2.c \
-    rtcm3.c \
-    rtcm3e.c \
-    rtkcmn.c \
-    rtkpos.c \
-    rtksvr.c \
-    sbas.c \
-    septentrio.c \
-    skytraq.c \
-    solution.c \
-    ss2.c \
-    stream.c \
-    streamsvr.c \
-    tides.c \
-    tle.c \
-    ublox.c \
-    userdef.c
+    datafifo.cpp \
+    rtklib/binex.c \
+    rtklib/cmr.c \
+    rtklib/convgpx.c \
+    rtklib/convkml.c \
+    rtklib/convrnx.c \
+    rtklib/crescent.c \
+    rtklib/datum.c \
+    rtklib/download.c \
+    rtklib/ephemeris.c \
+    rtklib/geoid.c \
+    rtklib/gis.c \
+    rtklib/gw10.c \
+    rtklib/ionex.c \
+    rtklib/javad.c \
+    rtklib/lambda.c \
+    rtklib/novatel.c \
+    rtklib/nvs.c \
+    rtklib/options.c \
+    rtklib/pntpos.c \
+    rtklib/postpos.c \
+    rtklib/ppp.c \
+    rtklib/ppp_ar.c \
+    rtklib/ppp_corr.c \
+    rtklib/preceph.c \
+    rtklib/qzslex.c \
+    rtklib/rcvlex.c \
+    rtklib/rcvraw.c \
+    rtklib/rinex.c \
+    rtklib/rt17.c \
+    rtklib/rtcm.c \
+    rtklib/rtcm2.c \
+    rtklib/rtcm3.c \
+    rtklib/rtcm3e.c \
+    rtklib/rtkcmn.c \
+    rtklib/rtkpos.c \
+    rtklib/rtksvr.c \
+    rtklib/sbas.c \
+    rtklib/septentrio.c \
+    rtklib/skytraq.c \
+    rtklib/solution.c \
+    rtklib/ss2.c \
+    rtklib/stream.c \
+    rtklib/streamsvr.c \
+    rtklib/tides.c \
+    rtklib/tle.c \
+    rtklib/ublox.c \
+    rtklib/userdef.c
 
 HEADERS  += mainwindow.h \
-    rtklib.h
+    rtklib.h \
+    datafifo.h \
+    rtklib/rtklib.h
 
 FORMS    += mainwindow.ui
 
