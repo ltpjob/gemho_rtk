@@ -2,7 +2,7 @@
 
 DataFifo::DataFifo()
 {
-
+    m_buffer.clear();
 }
 
 
@@ -11,45 +11,100 @@ DataFifo::~DataFifo()
 
 }
 
-int DataFifo::pushData(char *data, int len)
+qint64 DataFifo::popData(char *data, qint64 maxSize)
 {
-    int ret = -1;
+    QByteArray tmp;
 
     m_lock.lock();
 
-    m_buffer.open(QIODevice::WriteOnly|QIODevice::Append);
-    ret = m_buffer.write(data, len);
-    m_buffer.close();
+    if(maxSize > m_buffer.length())
+        maxSize = m_buffer.length();
+
+    tmp = m_buffer.left(maxSize);
+    memcpy(data, tmp.data(), maxSize);
+    m_buffer.remove(0, maxSize);
 
     m_lock.unlock();
 
-    return ret;
+    return maxSize;
 }
 
-int DataFifo::popData(char *data, int len)
+QByteArray DataFifo::popData(qint64 maxSize)
 {
-    int ret = -1;
+    QByteArray tmp;
 
     m_lock.lock();
 
-    m_buffer.open(QIODevice::ReadOnly);
-    ret = m_buffer.read(data, len);
-    m_buffer.close();
+    if(maxSize > m_buffer.length())
+        maxSize = m_buffer.length();
+
+    tmp = m_buffer.left(maxSize);
+    m_buffer.remove(0, maxSize);
 
     m_lock.unlock();
 
-    return ret;
+    return tmp;
 }
 
-int DataFifo::getDataSize()
+QByteArray DataFifo::popAllData()
 {
-    int ret = -1;
+    QByteArray tmp;
 
     m_lock.lock();
 
-    ret = m_buffer.bytesAvailable();
+    tmp = m_buffer;
+    m_buffer.clear();
 
     m_lock.unlock();
 
-    return ret;
+    return tmp;
 }
+
+qint64 DataFifo::pushData(const char *data, qint64 maxSize)
+{
+    qint64 len = -1;
+
+    m_lock.lock();
+
+    len = m_buffer.length();
+    m_buffer.append(data, maxSize);
+    len = m_buffer.length()-len;
+
+    m_lock.unlock();
+
+    return len;
+}
+
+qint64 DataFifo::pushData(const QByteArray &byteArray)
+{
+    qint64 len = -1;
+
+    m_lock.lock();
+
+    len = m_buffer.length();
+    m_buffer.append(byteArray);
+    len = m_buffer.length()-len;
+
+    m_lock.unlock();
+
+    return len;
+}
+
+qint64 DataFifo::getDataSize()
+{
+    qint64 len = -1;
+
+    m_lock.lock();
+
+    len = m_buffer.length();
+
+    m_lock.unlock();
+
+    return len;
+}
+
+
+
+
+
+
