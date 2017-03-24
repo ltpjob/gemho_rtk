@@ -4,12 +4,22 @@
 #include <string.h>
 #include <QDebug>
 #include <QIODevice>
+#include "mylog.h"
+
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     MainWindow w;
     w.show();
+
+
+
+    log_init(a.applicationDirPath()+ "/log4j.properties");
+
+    QString str;
+    str.sprintf("!!!!!!!!%d", 1233);
+    mylog->info(str);
 
 
 //    DataFifo df;

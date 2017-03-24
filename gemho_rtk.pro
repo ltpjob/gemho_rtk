@@ -160,7 +160,8 @@ HEADERS  += mainwindow.h \
     log4qt/rollingfileappender.h \
     log4qt/simplelayout.h \
     log4qt/ttcclayout.h \
-    log4qt/writerappender.h
+    log4qt/writerappender.h \
+    mylog.h
 
 FORMS    += mainwindow.ui
 
