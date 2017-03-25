@@ -18,8 +18,13 @@ int main(int argc, char *argv[])
     log_init(a.applicationDirPath()+ "/log4j.properties");
 
     QString str;
-    str.sprintf("!!!!!!!!%d", 1233);
-    mylog->info(str);
+    int i = 100;
+    while(i--)
+    {
+        str.sprintf("[%s][%s][%d]%d", __FILE__, __func__, __LINE__, i);
+        mylog->info(str);
+    }
+
 
 
 //    DataFifo df;

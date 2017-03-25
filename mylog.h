@@ -7,9 +7,9 @@
 #include "log4qt/logmanager.h"
 
 
-Log4Qt::Logger *mylog = Log4Qt::Logger::logger("R1");
+static Log4Qt::Logger *mylog = Log4Qt::Logger::logger("R1");
 
-void log_init(QString path)
+static void log_init(QString path)
 {
     Log4Qt::BasicConfigurator::configure();
     Log4Qt::PropertyConfigurator::configure(path);

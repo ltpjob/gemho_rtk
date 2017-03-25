@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include "datafifo.h"
 #include <QMap>
+#include "mylog.h"
 
 static void writesolhead(stream_t *stream, const solopt_t *solopt)
 {
@@ -552,21 +553,60 @@ typedef struct tagRtkPocHandle
 void *rtkprocess_create(prcopt_t *prcopt, solopt_t *solopt)
 {
     RtkPocHandle *handle = new RtkPocHandle;
+    QString strlog;
 
     if(handle == NULL)
+    {
+        strlog.sprintf("%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_create new failed!!!!!!!");
+        mylog->error(strlog);
         return handle;
+    }
 
 
     double pos[3] = { 0, 0, 0 }, nmeapos[3] = { 0, 0, 0 };
     int format[MAXSTRRTK] = { STRFMT_UBX, STRFMT_UBX, STRFMT_UBX };
     int strs[MAXSTRRTK]={0};
+    char errmsg[1024];
+    char *paths[8]={NULL},*cmds[3]={0},*cmds_periodic[3]={NULL},*rcvopts[3]={NULL};
+
+    memset(&handle->rtkServer, 0, sizeof(handle->rtkServer));
+    rtksvrinit(&handle->rtkServer);
+
+    pos[0] = pos[0] * D2R;
+    pos[1] = pos[1] * D2R;
+    pos[2] = pos[2];
+    pos2ecef(pos, nmeapos);
+
+    rtksvrMyStart(&handle->rtkServer, 10, 32768, strs, paths, format, 0, cmds, cmds_periodic, rcvopts,
+                  5000, 0, nmeapos, prcopt, solopt, NULL, errmsg);
+
+    handle->mapData.clear();
 
 
+
+    return handle;
 }
 
 
 
+int rtkprocess_process(void *hRtk)
+{
+    RtkPocHandle *handle = (RtkPocHandle *)hRtk;
+    QString strlog;
+    int ret = -1;
 
+
+    if(handle == NULL)
+    {
+        strlog.sprintf("%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_process NULL handle!!!!!!!");
+        mylog->error(strlog);
+        return ret;
+    }
+
+
+
+    return 0;
+}
 
 
 
