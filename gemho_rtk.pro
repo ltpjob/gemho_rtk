@@ -4,8 +4,10 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui serialport
 LIBS += -lpthread libwsock32 libws2_32 libwinmm
+
+DEFINES += TRACE
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -114,7 +116,8 @@ SOURCES += main.cpp\
     log4qt/rollingfileappender.cpp \
     log4qt/simplelayout.cpp \
     log4qt/ttcclayout.cpp \
-    log4qt/writerappender.cpp
+    log4qt/writerappender.cpp \
+    gemho_rtk.cpp
 
 HEADERS  += mainwindow.h \
     rtklib.h \
@@ -161,7 +164,9 @@ HEADERS  += mainwindow.h \
     log4qt/simplelayout.h \
     log4qt/ttcclayout.h \
     log4qt/writerappender.h \
-    mylog.h
+    mylog.h \
+    gemho_rtk.h \
+    rtkprocess.h
 
 FORMS    += mainwindow.ui
 

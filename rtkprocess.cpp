@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdio.h>
-#include "rtklib/rtklib.h"
 #include <unistd.h>
 #include "datafifo.h"
 #include <QMap>
 #include "mylog.h"
+#include "rtkprocess.h"
 
 static void writesolhead(stream_t *stream, const solopt_t *solopt)
 {
@@ -452,7 +452,7 @@ static int rtksvrMyStart(rtksvr_t *svr, int cycle, int buffsize, int *strs, char
     svr->nsol=0;
     svr->prcout=0;
     rtkfree(&svr->rtk);
-    rtkinit(&svr->rtk,prcopt);
+    rtkinit(&svr->rtk, prcopt);
 
     if (prcopt->initrst) { /* init averaging pos by restart */
         svr->nave=0;
@@ -546,11 +546,12 @@ static int rtksvrMyStart(rtksvr_t *svr, int cycle, int buffsize, int *strs, char
 typedef struct tagRtkPocHandle
 {
     rtksvr_t rtkServer;
-    QMap<QString, DataFifo *> mapData;
+    QMap<QString, DataFifo*> mapData;
+    pairInfo pInfo;
 
 }RtkPocHandle;
 
-void *rtkprocess_create(prcopt_t *prcopt, solopt_t *solopt)
+void *rtkprocess_create(pairInfo *pInfo, prcopt_t *prcopt, solopt_t *solopt)
 {
     RtkPocHandle *handle = new RtkPocHandle;
     QString strlog;
@@ -581,20 +582,87 @@ void *rtkprocess_create(prcopt_t *prcopt, solopt_t *solopt)
                   5000, 0, nmeapos, prcopt, solopt, NULL, errmsg);
 
     handle->mapData.clear();
-
+    handle->mapData[pInfo->device[0].id] = new DataFifo;
+    handle->mapData[pInfo->device[1].id] = new DataFifo;
+    handle->pInfo = *pInfo;
 
 
     return handle;
 }
 
+int rtkprocess_destory(void *hRtk)
+{
+    RtkPocHandle *handle = (RtkPocHandle *)hRtk;
+    QString strlog;
+    int ret = -1;
+    int i;
 
+    if(handle == NULL)
+    {
+        strlog.sprintf("%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_destory NULL handle!!!!!!!");
+        mylog->error(strlog);
+        return ret;
+    }
+
+
+    rtksvr_t *svr = &handle->rtkServer;
+
+    for (i = 0; i < MAXSTRRTK; i++)
+        strclose(svr->stream + i);
+    for (i = 0; i < 3; i++)
+    {
+        svr->nb[i] = svr->npb[i] = 0;
+        free(svr->buff[i]);
+        svr->buff[i] = NULL;
+        free(svr->pbuf[i]);
+        svr->pbuf[i] = NULL;
+        free_raw(svr->raw + i);
+        free_rtcm(svr->rtcm + i);
+    }
+    for (i = 0; i < 2; i++)
+    {
+        svr->nsb[i] = 0;
+        free(svr->sbuf[i]);
+        svr->sbuf[i] = NULL;
+    }
+
+
+    QMapIterator<QString, DataFifo*> iter(handle->mapData);
+    while (iter.hasNext()) {
+        iter.next();
+        delete iter.value();
+    }
+
+    return 0;
+}
+
+int rtkprocess_pushData(void *hRtk, QString id, char *data, int size)
+{
+    RtkPocHandle *handle = (RtkPocHandle *)hRtk;
+    QString strlog;
+    int ret = -1;
+
+    if(handle == NULL)
+    {
+        strlog.sprintf("%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_pushData NULL handle!!!!!!!");
+        mylog->error(strlog);
+        return ret;
+    }
+
+    QMap<QString, DataFifo*>::const_iterator iter = handle->mapData.find(id);
+    if(iter != handle->mapData.end())
+    {
+        ret = iter.value()->pushData(data, size);
+    }
+
+    return ret;
+}
 
 int rtkprocess_process(void *hRtk)
 {
     RtkPocHandle *handle = (RtkPocHandle *)hRtk;
     QString strlog;
     int ret = -1;
-
 
     if(handle == NULL)
     {
@@ -603,7 +671,160 @@ int rtkprocess_process(void *hRtk)
         return ret;
     }
 
+    obs_t obs;
+    obsd_t data[MAXOBS*2];
+    sol_t sol={{0}},sol_nmea={{0}};
+    double tt;
+    unsigned int tick,ticknmea,tick1hz;
+    unsigned char *p,*q;
+    char msg[128];
+    int i,j,n,fobs[3]={0},cycle,cputime,loops;
+    rtksvr_t *svr = &handle->rtkServer;
 
+    tracet(3, "rtksvrthread:\n");
+
+    svr->state = 1;
+    obs.data = data;
+    svr->tick = tickget();
+    ticknmea = tick1hz = svr->tick - 1000;
+
+    tick = tickget();
+
+    loops = handle->mapData.size();
+    if(loops > 3)
+        loops = 3;
+
+    QMap<QString, DataFifo*>::const_iterator iter = handle->mapData.begin();
+    for (i = 0; i < loops; i++,iter++)
+    {
+        p = svr->buff[i] + svr->nb[i];
+        q = svr->buff[i] + svr->buffsize;
+
+        /* read receiver raw/rtcm data from input stream */
+        if((n = iter.value()->popData((char *)p, q - p)) <= 0)
+        {
+            continue;
+        }
+
+        svr->nb[i] += n;
+
+        /* save peek buffer */
+        rtksvrlock(svr);
+        n = n < svr->buffsize - svr->npb[i] ? n : svr->buffsize - svr->npb[i];
+        memcpy(svr->pbuf[i] + svr->npb[i], p, n);
+        svr->npb[i] += n;
+        rtksvrunlock(svr);
+    }
+
+    for (i = 0; i < 3; i++)
+    {
+        if (svr->format[i] == STRFMT_SP3 || svr->format[i] == STRFMT_RNXCLK)
+        {
+            /* decode download file */
+            decodefile(svr, i);
+        }
+        else
+        {
+            /* decode receiver raw/rtcm data */
+            fobs[i] = decoderaw(svr, i);
+        }
+    }
+
+    if (fobs[1] > 0 && svr->rtk.opt.refpos == POSOPT_SINGLE)
+    {
+        if ((svr->rtk.opt.maxaveep <= 0 || svr->nave < svr->rtk.opt.maxaveep) && pntpos(svr->obs[1][0].data, svr->obs[1][0].n, &svr->nav, &svr->rtk.opt, &sol, NULL, NULL, msg))
+        {
+            svr->nave++;
+            for (i = 0; i < 3; i++)
+            {
+                svr->rb_ave[i] += (sol.rr[i] - svr->rb_ave[i]) / svr->nave;
+            }
+        }
+        for (i = 0; i < 3; i++)
+            svr->rtk.opt.rb[i] = svr->rb_ave[i];
+    }
+
+    for (i = 0; i < fobs[0]; i++)
+    { /* for each rover observation data */
+        obs.n = 0;
+        for (j = 0; j < svr->obs[0][i].n && obs.n < MAXOBS * 2; j++)
+        {
+            obs.data[obs.n++] = svr->obs[0][i].data[j];
+        }
+        for (j = 0; j < svr->obs[1][0].n && obs.n < MAXOBS * 2; j++)
+        {
+            obs.data[obs.n++] = svr->obs[1][0].data[j];
+        }
+        /* carrier phase bias correction */
+        if (!strstr(svr->rtk.opt.pppopt, "-DIS_FCB"))
+        {
+            corr_phase_bias(obs.data, obs.n, &svr->nav);
+        }
+        /* rtk positioning */
+
+        tracelevel(6);
+        rtksvrlock(svr);
+        rtkpos(&svr->rtk, obs.data, obs.n, &svr->nav);
+        rtksvrunlock(svr);
+        tracelevel(0);
+
+        FILE *pf = fopen("e:\\result\\result.txt", "a+");
+        outsol(pf, &svr->rtk.sol, svr->rtk.rb, &solopt_default);
+        fclose(pf);
+
+        if (svr->rtk.sol.stat != SOLQ_NONE)
+        {
+
+            /* adjust current time */
+            tt = (int) (tickget() - tick) / 1000.0 + DTTOL;
+            timeset(gpst2utc(timeadd(svr->rtk.sol.time, tt)));
+
+            /* write solution */
+            writesol(svr, i);
+            strlog.sprintf("%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_process has answer!!!!!!!");
+            mylog->error(strlog);
+        }
+        /* if cpu overload, inclement obs outage counter and break */
+        if ((int) (tickget() - tick) >= svr->cycle)
+        {
+            svr->prcout += fobs[0] - i - 1;
+#if 0 /* omitted v.2.4.1 */
+            break;
+#endif
+        }
+        /* send null solution if no solution (1hz) */
+        if (svr->rtk.sol.stat == SOLQ_NONE && (int) (tick - tick1hz) >= 1000)
+        {
+            writesol(svr, 0);
+            tick1hz = tick;
+        }
+        /* write periodic command to input stream */
+        for (i = 0; i < 3; i++)
+        {
+            periodic_cmd(cycle * svr->cycle, svr->cmds_periodic[i], svr->stream + i);
+        }
+        /* send nmea request to base/nrtk input stream */
+        if (svr->nmeacycle > 0 && (int) (tick - ticknmea) >= svr->nmeacycle)
+        {
+            if (svr->stream[1].state == 1)
+            {
+                if (svr->nmeareq == 1)
+                {
+                    sol_nmea.stat = SOLQ_SINGLE;
+                    sol_nmea.time = utc2gpst(timeget());
+                    matcpy(sol_nmea.rr, svr->nmeapos, 3, 1);
+                    strsendnmea(svr->stream + 1, &sol_nmea);
+                }
+                else if (svr->nmeareq == 2 && norm(svr->rtk.sol.rr, 3) > 0.0)
+                {
+                    strsendnmea(svr->stream + 1, &svr->rtk.sol);
+                }
+            }
+            ticknmea = tick;
+        }
+        if ((cputime = (int) (tickget() - tick)) > 0)
+            svr->cputime = cputime;
+    }
 
     return 0;
 }
