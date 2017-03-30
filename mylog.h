@@ -11,7 +11,7 @@ static Log4Qt::Logger *mylog = Log4Qt::Logger::logger("R1");
 
 static Log4Qt::Logger *mylog_console = Log4Qt::Logger::logger("Console");
 
-static void log_init(QString path)
+static inline void log_init(QString path)
 {
     Log4Qt::BasicConfigurator::configure();
     Log4Qt::PropertyConfigurator::configure(path);

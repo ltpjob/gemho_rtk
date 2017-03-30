@@ -117,7 +117,8 @@ SOURCES += main.cpp\
     log4qt/simplelayout.cpp \
     log4qt/ttcclayout.cpp \
     log4qt/writerappender.cpp \
-    gemho_rtk.cpp
+    gemho_rtk.cpp \
+    bsp_thr.c
 
 HEADERS  += mainwindow.h \
     rtklib.h \
@@ -166,9 +167,12 @@ HEADERS  += mainwindow.h \
     log4qt/writerappender.h \
     mylog.h \
     gemho_rtk.h \
-    rtkprocess.h
+    rtkprocess.h \
+    bsp_debug.h \
+    bsp_thr.h
 
 FORMS    += mainwindow.ui
 
 DISTFILES += \
-    gemho_rtk.pro.user
+    gemho_rtk.pro.user \
+    log4j.properties

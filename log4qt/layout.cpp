@@ -74,7 +74,7 @@ namespace Log4Qt
 		// There seams to be no function in Qt for this
 		
 #ifdef Q_OS_WIN32
-		return QLatin1String("\r\n");
+        return QLatin1String("\n");
 #endif // Q_OS_WIN32
 //#ifdef Q_OS_MAC
 //		return QLatin1String("\r");

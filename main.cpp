@@ -115,10 +115,11 @@ int main(int argc, char *argv[])
 //    while(i--)
 //    {
 //        str.sprintf("[%s][%s][%d]%d", __FILE__, __func__, __LINE__, i);
-//        mylog->debug(str);
+//        mylog->error(str);
 
 //        static Log4Qt::Logger *mylog2 = Log4Qt::Logger::logger("Console");
 
+//        str.sprintf("[%s][%s][%d]%d", __FILE__, __func__, __LINE__, i);
 //        mylog2->debug(str);
 
 //    }
