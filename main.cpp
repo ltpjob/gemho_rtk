@@ -108,64 +108,15 @@ int main(int argc, char *argv[])
 
     log_init(QApplication::applicationDirPath()+ "/log4j.properties");
 
-    gemhoRtkStart();
+    while(1)
+    {
+        void *handle = gemhoRtkStart();
 
-//    QString str;
-//    int i = 100;
-//    while(i--)
-//    {
-//        str.sprintf("[%s][%s][%d]%d", __FILE__, __func__, __LINE__, i);
-//        mylog->error(str);
+        sleep(1);
+//        sleep(100);
 
-//        static Log4Qt::Logger *mylog2 = Log4Qt::Logger::logger("Console");
-
-//        str.sprintf("[%s][%s][%d]%d", __FILE__, __func__, __LINE__, i);
-//        mylog2->debug(str);
-
-//    }
-
-//    return 0;
-
-//    pthread_t pid;
-//    pthread_create(&pid, NULL, process_main, NULL);
-
-//    DataFifo df;
-//    int i=100;
-
-//    while(i--)
-//    {
-//        char *test = "123456789";
-//        char buf[1024] = "";
-//        int len = 0;
-
-//        df.pushData(test, strlen(test));
-//        qDebug()<<df.getDataSize();
-//    }
-
-//    i = 10;
-//    while(i--)
-//    {
-//        char *test = "123456789";
-//        char buf[1024] = "";
-//        int len = 0;
-
-//        len = df.popData(buf, sizeof(buf));
-//        qDebug()<<len<<df.getDataSize();
-//    }
-
-//    i=5;
-
-//    while(i--)
-//    {
-//        char *test = "123456789";
-//        char buf[1024] = "";
-//        int len = 0;
-
-//        df.pushData(test, strlen(test));
-//        qDebug()<<df.getDataSize();
-//    }
-
-
+        gemhoRtkStop(handle);
+    }
 
 
     return a.exec();

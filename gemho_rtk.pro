@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui serialport
+QT       += core gui serialport network
 LIBS += -lpthread libwsock32 libws2_32 libwinmm
 
 DEFINES += TRACE
@@ -121,7 +121,6 @@ SOURCES += main.cpp\
     bsp_thr.c
 
 HEADERS  += mainwindow.h \
-    rtklib.h \
     datafifo.h \
     rtklib/rtklib.h \
     log4qt/helpers/classlogger.h \

@@ -23,7 +23,7 @@ typedef struct tagPairInfo{
 
 void *gemhoRtkStart();
 
-int gemhoRtkStop();
+int gemhoRtkStop(void *pGrtk);
 
 
 #ifdef __cplusplus

@@ -558,7 +558,7 @@ void *rtkprocess_create(pairInfo *pInfo, prcopt_t *prcopt, solopt_t *solopt)
 
     if(handle == NULL)
     {
-        strlog.sprintf("%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_create new failed!!!!!!!");
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_create new failed!!!!!!!");
         mylog->error(strlog);
         return handle;
     }
@@ -599,7 +599,7 @@ int rtkprocess_destory(void *hRtk)
 
     if(handle == NULL)
     {
-        strlog.sprintf("%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_destory NULL handle!!!!!!!");
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_destory NULL handle!!!!!!!");
         mylog->error(strlog);
         return ret;
     }
@@ -626,12 +626,17 @@ int rtkprocess_destory(void *hRtk)
         svr->sbuf[i] = NULL;
     }
 
+    rtkfree(&svr->rtk);
+    rtksvrfree(svr);
+
 
     QMapIterator<QString, DataFifo*> iter(handle->mapData);
     while (iter.hasNext()) {
         iter.next();
         delete iter.value();
     }
+
+    delete handle;
 
     return 0;
 }
@@ -644,7 +649,7 @@ int rtkprocess_pushData(void *hRtk, QString id, char *data, int size)
 
     if(handle == NULL)
     {
-        strlog.sprintf("%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_pushData NULL handle!!!!!!!");
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_pushData NULL handle!!!!!!!");
         mylog->error(strlog);
         return ret;
     }
@@ -666,7 +671,7 @@ int rtkprocess_process(void *hRtk)
 
     if(handle == NULL)
     {
-        strlog.sprintf("%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_process NULL handle!!!!!!!");
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_process NULL handle!!!!!!!");
         mylog->error(strlog);
         return ret;
     }
@@ -781,7 +786,7 @@ int rtkprocess_process(void *hRtk)
 
             /* write solution */
             writesol(svr, i);
-            strlog.sprintf("%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_process has answer!!!!!!!");
+            strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_process has answer!!!!!!!");
             mylog->error(strlog);
         }
         /* if cpu overload, inclement obs outage counter and break */
