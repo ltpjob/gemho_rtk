@@ -7,6 +7,10 @@
 QT       += core gui serialport network
 LIBS += -lpthread libwsock32 libws2_32 libwinmm
 
+QT -= gui
+CONFIG += console
+CONFIG -= app_bundle
+
 DEFINES += TRACE
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -27,7 +31,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
     datafifo.cpp \
     rtklib/binex.c \
     rtklib/cmr.c \
@@ -120,8 +123,7 @@ SOURCES += main.cpp\
     gemho_rtk.cpp \
     bsp_thr.c
 
-HEADERS  += mainwindow.h \
-    datafifo.h \
+HEADERS  += datafifo.h \
     rtklib/rtklib.h \
     log4qt/helpers/classlogger.h \
     log4qt/helpers/configuratorhelper.h \
@@ -170,8 +172,5 @@ HEADERS  += mainwindow.h \
     bsp_debug.h \
     bsp_thr.h
 
-FORMS    += mainwindow.ui
 
-DISTFILES += \
-    gemho_rtk.pro.user \
-    log4j.properties
+
