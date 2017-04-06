@@ -97,8 +97,6 @@ void *process_main(void *args)
 //    }
 
     void *handle = gemhoRtkStart();
-    QTextStream in(stdin);
-    QString str;
 
     while(1)
     {
