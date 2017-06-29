@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<pairs>
+  <pair>
+    <device>
+      <id>1092600369</id>
+      <ip>192.168.88.5</ip>
+      <port>5566</port>
+      <type>rover</type>
+      <lat>37.518611111</lat>
+      <lon>122.042777778</lon>
+      <height>20.0000</height>
+    </device>
+    <device>
+      <id>00000000</id>
+      <ip>192.168.88.100</ip>
+      <port>6688</port>
+      <type>base</type>
+      <lat>37.518611111</lat>
+      <lon>122.042777778</lon>
+      <height>20.0000</height>
+    </device>
+  </pair>
+</pairs>
