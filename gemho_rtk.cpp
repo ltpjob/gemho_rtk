@@ -13,7 +13,12 @@
 #include "rtkprocess.h"
 #include "bsp_thr.h"
 #include <unistd.h>
-
+typedef struct tagupComDataHead
+{
+    quint8  start[2];
+    qint16 type;
+    qint32 size;
+} __attribute__((packed)) upComDataHead;
 
 static int readDevice(QXmlStreamReader *reader, deviceInfo *device)
 {
@@ -166,6 +171,7 @@ static void *process_DataCollect(void *args)
     QString strlog;
     QTcpSocket client;
     int nPrintflag1 = 0;
+    QTime timeRcvAlive, timeSendAlive;
 
     strlog.sprintf("[%s][%s][%d]process_DataCollect create:ip(%s),port(%s),ids:", __FILE__, __func__, __LINE__,
                    handle->ip.toStdString().c_str(), handle->port.toStdString().c_str());
@@ -198,21 +204,139 @@ static void *process_DataCollect(void *args)
                        handle->ip.toStdString().c_str(), handle->port.toStdString().c_str());
         mylog->info(strlog);
 
+
+        timeRcvAlive.restart();
+        timeSendAlive.restart();
         while(client.state() == QAbstractSocket::ConnectedState && handle->runFlag == 1)
         {
-            QByteArray data;
+            upComDataHead head;
+            qint64 sentsize = 0;
+            qint64 retSize = 0;
+            qint64 size = 0;
 
-            if(client.waitForReadyRead(2000))
+            if(timeRcvAlive.elapsed() > 10*1000)
             {
-                data = client.read(1024);
-                if(data.size() > 0)
+                client.disconnectFromHost();
+                if (client.state() == QAbstractSocket::UnconnectedState ||
+                    client.waitForDisconnected(1000))
                 {
-                    qDebug()<<data;
-                    client.write(data);
-
-                    client.disconnectFromHost();
-                    client.waitForDisconnected();
+                    strlog.sprintf("[%s][%s][%d]ip(%s),port(%s):timeRcvAlive timeout,reconnect!!", __FILE__, __func__, __LINE__,
+                                   handle->ip.toStdString().c_str(), handle->port.toStdString().c_str());
+                    mylog->error(strlog);
                 }
+
+                break;
+            }
+
+            if(timeSendAlive.elapsed() >= 2*1000)
+            {
+                head.start[0] = 0x55;
+                head.start[1] = 0xaa;
+                head.type = 2;
+                head.size = 0;
+
+                sentsize = 0;
+                size = sizeof(head);
+
+                while(size != sentsize)
+                {
+                  retSize = client.write((char *)&head, size-sentsize);
+
+                  if(retSize < 0)
+                  {
+                      strlog.sprintf("[%s][%s][%d]ip(%s),port(%s):send alive failed!!! error:%s", __FILE__, __func__, __LINE__,
+                                     handle->ip.toStdString().c_str(), handle->port.toStdString().c_str(),
+                                     client.errorString().toStdString().c_str());
+                      mylog->error(strlog);
+                      break;
+                  }
+                  sentsize += retSize;
+                }
+                timeSendAlive.restart();
+            }
+
+            if(client.waitForReadyRead(1000))
+            {
+                if(client.bytesAvailable() >= sizeof(upComDataHead))
+                {
+                    qint64 readSize = 0;
+                    char buffer[1024] = "";
+                    readSize = client.read(buffer, sizeof(upComDataHead));
+                    if(readSize != sizeof(upComDataHead))
+                    {
+                        strlog.sprintf("[%s][%s][%d]read upComDataHead fail!", __FILE__, __func__, __LINE__);
+                        mylog->error(strlog);
+                        continue;
+                    }
+//                    head = *((upComDataHead *)buffer);
+                    memcpy(&head, buffer, sizeof(upComDataHead));
+
+                    if(head.start[0]==0x55&&head.start[1]==0xaa&&head.type==1)
+                    {
+                        if(client.waitForReadyRead(3000) == false)
+                        {
+                            strlog.sprintf("[%s][%s][%d]head.type==1 reacv data fail!", __FILE__, __func__, __LINE__);
+                            mylog->error(strlog);
+                            continue;
+                        }
+
+                        int timeout = 300;
+                        while(timeout--)
+                        {
+                            if(client.waitForReadyRead(10) && client.bytesAvailable() >= head.size)
+                            {
+                                quint32 id = 0;
+                                QString strId;
+
+                                readSize = client.read(buffer, head.size);
+                                if(readSize != head.size)
+                                {
+                                    strlog.sprintf("[%s][%s][%d]read DATA fail!", __FILE__, __func__, __LINE__);
+                                    mylog->error(strlog);
+                                    break;
+                                }
+
+//                                id = *((qint32*)buffer);
+                                memcpy(&id, buffer, sizeof(qint32));
+                                strId = QString::number(id, 10);
+
+                                for(QList<void *>::iterator iter = handle->listRtkProcess.begin(); iter != handle->listRtkProcess.end(); iter++)
+                                {
+                                    rtkprocess_pushData(*iter, strId, buffer+4, readSize-4);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    else if(head.start[0]==0x55&&head.start[1]==0xaa&&head.type==2)
+                    {
+                        timeRcvAlive.restart();
+                    }
+                    else
+                    {
+                        if(client.waitForReadyRead(10) == true)
+                        {
+                            client.readAll();
+                        }
+                    }
+
+                }
+//                data = client.read(1024);
+//                if(data.size() > 0)
+//                {
+//                    qDebug()<<data;
+
+
+//                    for(QList<void *>::iterator iter = handle->listRtkProcess.begin(); iter != handle->listRtkProcess.end(); iter++)
+//                    {
+//                        rtkprocess_pushData(*iter, *(handle->ids.begin()), data.data(), data.length());
+//                    }
+
+//                    client.write(data);
+
+//                    client.disconnectFromHost();
+//                    client.waitForDisconnected();
+//                }
             }
         }
     }
