@@ -657,6 +657,17 @@ int rtkprocess_pushData(void *hRtk, QString id, char *data, int size)
     QMap<QString, DataFifo*>::const_iterator iter = handle->mapData.find(id);
     if(iter != handle->mapData.end())
     {
+        QString str;
+
+        str = "E:\\GNSS";
+        str += "\\" + id + ".txt";
+        FILE *pf = fopen(str.toStdString().c_str(), "ab+");
+        if(pf)
+        {
+            fwrite(data, 1, size, pf);
+            fclose(pf);
+        }
+
         ret = iter.value()->pushData(data, size);
     }
 
@@ -748,7 +759,6 @@ int rtkprocess_process(void *hRtk)
         for (i = 0; i < 3; i++)
             svr->rtk.opt.rb[i] = svr->rb_ave[i];
     }
-
     for (i = 0; i < fobs[0]; i++)
     { /* for each rover observation data */
         obs.n = 0;
@@ -773,7 +783,7 @@ int rtkprocess_process(void *hRtk)
         rtksvrunlock(svr);
         tracelevel(0);
 
-        FILE *pf = fopen("e:\\result\\result.txt", "a+");
+        FILE *pf = fopen("e:\\GNSS\\result.txt", "a+");
         outsol(pf, &svr->rtk.sol, svr->rtk.rb, &solopt_default);
         fclose(pf);
 

@@ -22,7 +22,7 @@ typedef struct tagPairInfo{
 }pairInfo;
 
 void *gemhoRtkStart();
-
+int gemhoRtkProcess(void *pGrtk);
 int gemhoRtkStop(void *pGrtk);
 
 

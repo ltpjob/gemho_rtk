@@ -268,7 +268,6 @@ static void *process_DataCollect(void *args)
                         mylog->error(strlog);
                         continue;
                     }
-//                    head = *((upComDataHead *)buffer);
                     memcpy(&head, buffer, sizeof(upComDataHead));
 
                     if(head.start[0]==0x55&&head.start[1]==0xaa&&head.type==1)
@@ -285,7 +284,7 @@ static void *process_DataCollect(void *args)
                         {
                             if(client.waitForReadyRead(10) && client.bytesAvailable() >= head.size)
                             {
-                                quint32 id = 0;
+                                quint32 id[3] = {};
                                 QString strId;
 
                                 readSize = client.read(buffer, head.size);
@@ -296,13 +295,12 @@ static void *process_DataCollect(void *args)
                                     break;
                                 }
 
-//                                id = *((qint32*)buffer);
-                                memcpy(&id, buffer, sizeof(qint32));
-                                strId = QString::number(id, 10);
+                                memcpy(id, buffer, sizeof(id));
+                                strId.sprintf("%08X%08X%08X", id[2], id[1], id[0]);
 
                                 for(QList<void *>::iterator iter = handle->listRtkProcess.begin(); iter != handle->listRtkProcess.end(); iter++)
                                 {
-                                    rtkprocess_pushData(*iter, strId, buffer+4, readSize-4);
+                                    rtkprocess_pushData(*iter, strId, buffer+sizeof(id), readSize-sizeof(id));
                                 }
                                 break;
                             }
@@ -441,6 +439,25 @@ void *gemhoRtkStart()
     }
 
     return handle;
+}
+
+int gemhoRtkProcess(void *pGrtk)
+{
+    GemhoRtk *handle = (GemhoRtk *)pGrtk;
+    QString strlog;
+
+    if(handle == NULL)
+    {
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "gemhoRtkStop handle NULL!");
+        mylog->error(strlog);
+        return -1;
+    }
+
+    QList<void *> &listrtkp = handle->listRtkProcess;
+    for(QList<void *>::iterator iter=listrtkp.begin(); iter!=listrtkp.end(); iter++)
+    {
+        rtkprocess_process(*iter);
+    }
 }
 
 

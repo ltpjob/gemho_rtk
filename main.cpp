@@ -20,7 +20,7 @@ void *process(void *args)
 
     while(1)
     {
-        rtkprocess_process(handle);
+        gemhoRtkProcess(handle);
         usleep(100*1000);
     }
 
@@ -97,6 +97,12 @@ void *process_main(void *args)
 //    }
 
     void *handle = gemhoRtkStart();
+
+    traceclose();
+    traceopen("e:\\GNSS\\debug.txt");
+
+    pthread_t pid;
+    pthread_create(&pid, NULL, process, handle);
 
     while(1)
     {
