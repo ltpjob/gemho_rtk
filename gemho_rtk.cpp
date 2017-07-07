@@ -255,7 +255,8 @@ static void *process_DataCollect(void *args)
                 timeSendAlive.restart();
             }
 
-            if(client.waitForReadyRead(1000))
+//            printf("%d\n", client.bytesAvailable());
+            if(client.bytesAvailable()>0 || client.waitForReadyRead(1000))
             {
                 if(client.bytesAvailable() >= sizeof(upComDataHead))
                 {
@@ -272,7 +273,7 @@ static void *process_DataCollect(void *args)
 
                     if(head.start[0]==0x55&&head.start[1]==0xaa&&head.type==1)
                     {
-                        if(client.waitForReadyRead(3000) == false)
+                        if(client.bytesAvailable()==0 && client.waitForReadyRead(300) == false)
                         {
                             strlog.sprintf("[%s][%s][%d]head.type==1 reacv data fail!", __FILE__, __func__, __LINE__);
                             mylog->error(strlog);
@@ -309,10 +310,11 @@ static void *process_DataCollect(void *args)
                     else if(head.start[0]==0x55&&head.start[1]==0xaa&&head.type==2)
                     {
                         timeRcvAlive.restart();
+//                        printf("alive\n");
                     }
                     else
                     {
-                        if(client.waitForReadyRead(10) == true)
+                        if(client.waitForReadyRead(10) == true || client.bytesAvailable() > 0)
                         {
                             client.readAll();
                         }
