@@ -21,6 +21,11 @@ typedef struct tagPairInfo{
     deviceInfo device[2];
 }pairInfo;
 
+typedef struct tagRtkConfig{
+    QString savePath;
+    QString resultPath;
+}RtkConfig;
+
 void *gemhoRtkStart();
 int gemhoRtkProcess(void *pGrtk);
 int gemhoRtkStop(void *pGrtk);

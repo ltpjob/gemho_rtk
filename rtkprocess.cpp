@@ -5,6 +5,8 @@
 #include <QMap>
 #include "mylog.h"
 #include "rtkprocess.h"
+#include <QDir>
+#include <QDateTime>
 
 static void writesolhead(stream_t *stream, const solopt_t *solopt)
 {
@@ -548,10 +550,11 @@ typedef struct tagRtkPocHandle
     rtksvr_t rtkServer;
     QMap<QString, DataFifo*> mapData;
     pairInfo pInfo;
+    RtkConfig rtkconfig;
 
 }RtkPocHandle;
 
-void *rtkprocess_create(pairInfo *pInfo, prcopt_t *prcopt, solopt_t *solopt)
+void *rtkprocess_create(pairInfo *pInfo, prcopt_t *prcopt, solopt_t *solopt, RtkConfig *pRtkcfg)
 {
     RtkPocHandle *handle = new RtkPocHandle;
     QString strlog;
@@ -585,6 +588,7 @@ void *rtkprocess_create(pairInfo *pInfo, prcopt_t *prcopt, solopt_t *solopt)
     handle->mapData[pInfo->device[0].id] = new DataFifo;
     handle->mapData[pInfo->device[1].id] = new DataFifo;
     handle->pInfo = *pInfo;
+    handle->rtkconfig = *pRtkcfg;
 
 
     return handle;
@@ -659,13 +663,28 @@ int rtkprocess_pushData(void *hRtk, QString id, char *data, int size)
     {
         QString str;
 
-        str = "E:\\GNSS";
-        str += "\\" + id + ".txt";
-        FILE *pf = fopen(str.toStdString().c_str(), "ab+");
-        if(pf)
+        if(handle->rtkconfig.savePath != "")
         {
-            fwrite(data, 1, size, pf);
-            fclose(pf);
+            QDir dir;
+
+            str = handle->rtkconfig.savePath + "/";
+            str += id + "/" + QDateTime::currentDateTime().toString("yyyyMMdd") + "/";
+
+            if(dir.exists(str) == false)
+            {
+                dir.mkdir(str);
+            }
+
+            if(dir.exists(handle->rtkconfig.savePath) == true)
+            {
+                str += QDateTime::currentDateTime().toString("yyyyMMdd") + "-" + id + ".txt";
+                FILE *pf = fopen(str.toStdString().c_str(), "ab+");
+                if(pf)
+                {
+                    fwrite(data, 1, size, pf);
+                    fclose(pf);
+                }
+            }
         }
 
         ret = iter.value()->pushData(data, size);
@@ -783,9 +802,18 @@ int rtkprocess_process(void *hRtk)
         rtksvrunlock(svr);
         tracelevel(0);
 
-        FILE *pf = fopen("e:\\GNSS\\result.txt", "a+");
-        outsol(pf, &svr->rtk.sol, svr->rtk.rb, &solopt_default);
-        fclose(pf);
+        if(handle->rtkconfig.resultPath != "")
+        {
+            QString str;
+            str = handle->rtkconfig.resultPath + "/" + "result.txt";
+            FILE *pf = fopen(str.toStdString().c_str(), "a+");
+            if(pf != NULL)
+            {
+                outsol(pf, &svr->rtk.sol, svr->rtk.rb, &solopt_default);
+                fclose(pf);
+            }
+        }
+
 
         if (svr->rtk.sol.stat != SOLQ_NONE)
         {

@@ -99,9 +99,9 @@ static int readDevice(QXmlStreamReader *reader, deviceInfo *device)
     return 0;
 }
 
-static int readxml(QList<pairInfo> *list)
+static int readxml(QList<pairInfo> *list, RtkConfig *rtkcfg)
 {
-    QString filename = QApplication::applicationDirPath() + "\\config.xml";
+    QString filename = QApplication::applicationDirPath() + "//config.xml";
     QString strlog;
 
     QFile file(filename);
@@ -119,6 +119,18 @@ static int readxml(QList<pairInfo> *list)
             if(token == QXmlStreamReader::StartDocument)
             {
                 continue;
+            }
+
+            if (reader.isStartElement() && reader.name() == "savepath")
+            {
+                rtkcfg->savePath  = reader.readElementText();
+
+            }
+
+            if (reader.isStartElement() && reader.name() == "resultpath")
+            {
+                rtkcfg->savePath  = reader.readElementText();
+
             }
 
             if (reader.isStartElement() && reader.name() == "pair")
@@ -359,6 +371,7 @@ void *gemhoRtkStart()
     QMultiMap <QStringList, QString> mapID;
     QSet<QString> set;
     GemhoRtk *handle = new GemhoRtk;
+    RtkConfig rtkcfg;
 
     if(handle == NULL)
     {
@@ -367,7 +380,7 @@ void *gemhoRtkStart()
         return handle;
     }
 
-    readxml(&list);
+    readxml(&list, &rtkcfg);
 
     for(QList<pairInfo>::iterator iter = list.begin(); iter != list.end(); iter++)
     {
@@ -388,7 +401,7 @@ void *gemhoRtkStart()
         prcopt.rb[2] = pos[2];
         solopt_t solopt[2] = {solopt_default, solopt_default};
 
-        prtkp = rtkprocess_create(&pi, &prcopt, solopt);
+        prtkp = rtkprocess_create(&pi, &prcopt, solopt, &rtkcfg);
         if(prtkp == NULL)
         {
             strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_create create failed!");
@@ -460,6 +473,8 @@ int gemhoRtkProcess(void *pGrtk)
     {
         rtkprocess_process(*iter);
     }
+
+    return 0;
 }
 
 

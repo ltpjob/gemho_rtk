@@ -8,7 +8,7 @@ extern "C" {
 #include "gemho_rtk.h"
 #include "rtklib/rtklib.h"
 
-void *rtkprocess_create(pairInfo *pInfo, prcopt_t *prcopt, solopt_t *solopt);
+void *rtkprocess_create(pairInfo *pInfo, prcopt_t *prcopt, solopt_t *solopt, RtkConfig *pRtkcfg);
 
 int rtkprocess_destory(void *hRtk);
 

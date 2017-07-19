@@ -99,7 +99,7 @@ void *process_main(void *args)
     void *handle = gemhoRtkStart();
 
     traceclose();
-    traceopen("e:\\GNSS\\debug.txt");
+//    traceopen(".//debug.txt");
 
     pthread_t pid;
     pthread_create(&pid, NULL, process, handle);
