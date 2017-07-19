@@ -668,11 +668,11 @@ int rtkprocess_pushData(void *hRtk, QString id, char *data, int size)
             QDir dir;
 
             str = handle->rtkconfig.savePath + "/";
-            str += id + "/" + QDateTime::currentDateTime().toString("yyyyMMdd") + "/";
+            str += id + "/";
 
             if(dir.exists(str) == false)
             {
-                dir.mkdir(str);
+                dir.mkpath(str);
             }
 
             if(dir.exists(handle->rtkconfig.savePath) == true)
