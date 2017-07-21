@@ -1,4 +1,4 @@
-#include <QApplication>
+#include <QCoreApplication>
 #include <QXmlStreamReader>
 #include <QFile>
 #include <QList>
@@ -101,7 +101,7 @@ static int readDevice(QXmlStreamReader *reader, deviceInfo *device)
 
 static int readxml(QList<pairInfo> *list, RtkConfig *rtkcfg)
 {
-    QString filename = QApplication::applicationDirPath() + "//config.xml";
+    QString filename = QCoreApplication::applicationDirPath() + "//config.xml";
     QString strlog;
 
     QFile file(filename);

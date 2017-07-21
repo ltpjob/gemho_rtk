@@ -1,4 +1,4 @@
-#include <QApplication>
+#include <QCoreApplication>
 #include <datafifo.h>
 #include <QDebug>
 #include <QIODevice>
@@ -122,9 +122,9 @@ void *process_main(void *args)
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
+    QCoreApplication a(argc, argv);
 
-    log_init(QApplication::applicationDirPath()+ "/log4j.properties");
+    log_init(QCoreApplication::applicationDirPath()+ "/log4j.properties");
 
     BSP_ThrHndl mainThread;
     BSP_thrCreate(&mainThread, process_main, BSP_THR_PRI_DEFAULT, BSP_THR_STACK_SIZE_DEFAULT, NULL);
