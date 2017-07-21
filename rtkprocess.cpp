@@ -805,7 +805,7 @@ int rtkprocess_process(void *hRtk)
         if(handle->rtkconfig.resultPath != "")
         {
             QString str;
-            str = handle->rtkconfig.resultPath + "/" + "result.txt";
+            str = handle->rtkconfig.resultPath + "/" + handle->pInfo.device[0].id + "_result.txt";
             FILE *pf = fopen(str.toStdString().c_str(), "a+");
             if(pf != NULL)
             {

@@ -129,7 +129,7 @@ static int readxml(QList<pairInfo> *list, RtkConfig *rtkcfg)
 
             if (reader.isStartElement() && reader.name() == "resultpath")
             {
-                rtkcfg->savePath  = reader.readElementText();
+                rtkcfg->resultPath  = reader.readElementText();
 
             }
 
@@ -393,6 +393,7 @@ void *gemhoRtkStart()
         void *prtkp = NULL;
 
         prcopt.mode = PMODE_KINEMA;
+        prcopt.modear = 3;
         p[0]=pi.device[1].lat.toDouble()*D2R;
         p[1]=pi.device[1].lon.toDouble()*D2R;
         p[2]=pi.device[1].height.toDouble();
