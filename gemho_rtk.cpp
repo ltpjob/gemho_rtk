@@ -364,11 +364,12 @@ static void *process_DataCollect(void *args)
     return NULL;
 }
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 6, 0))
 void *gemhoRtkStart()
 {
     QList<pairInfo> list;
     QString strlog;
-    QMultiMap <QStringList, QString> mapID;
+    QMultiMap <QList<QString>, QString> mapID;
     QSet<QString> set;
     GemhoRtk *handle = new GemhoRtk;
     RtkConfig rtkcfg;
@@ -388,7 +389,7 @@ void *gemhoRtkStart()
         double pos[3]={0};
         pairInfo pi = *iter;
         prcopt_t prcopt = prcopt_default;
-        QStringList strlist;
+        QList<QString> strlist;
         void *prtkp = NULL;
 
         prcopt.mode = PMODE_KINEMA;
@@ -421,8 +422,9 @@ void *gemhoRtkStart()
         mapID.insert(strlist, pi.device[1].id);
     }
 
-    QList<QStringList> keys = mapID.uniqueKeys();
-    for(QList<QStringList>::iterator iter=keys.begin(); iter != keys.end(); iter++)
+    QList<QList<QString>> keys = mapID.uniqueKeys();
+    keys > keys;
+    for(QList<QList<QString>>::iterator iter=keys.begin(); iter != keys.end(); iter++)
     {
         DataCollect *dc = new DataCollect;
         int status = -1;
@@ -455,6 +457,104 @@ void *gemhoRtkStart()
 
     return handle;
 }
+#else
+void *gemhoRtkStart()
+{
+    QList<pairInfo> list;
+    QString strlog;
+    QMultiMap <QString, QString> mapID;
+    QSet<QString> set;
+    GemhoRtk *handle = new GemhoRtk;
+    RtkConfig rtkcfg;
+
+    if(handle == NULL)
+    {
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "gemhoRtkStart new failed!");
+        mylog->error(strlog);
+        return handle;
+    }
+
+    readxml(&list, &rtkcfg);
+
+    for(QList<pairInfo>::iterator iter = list.begin(); iter != list.end(); iter++)
+    {
+        double p[3]={0};
+        double pos[3]={0};
+        pairInfo pi = *iter;
+        prcopt_t prcopt = prcopt_default;
+        QString strlist;
+        void *prtkp = NULL;
+
+        prcopt.mode = PMODE_KINEMA;
+        p[0]=pi.device[1].lat.toDouble()*D2R;
+        p[1]=pi.device[1].lon.toDouble()*D2R;
+        p[2]=pi.device[1].height.toDouble();
+        pos2ecef(p, pos);
+        prcopt.rb[0] = pos[0];
+        prcopt.rb[1] = pos[1];
+        prcopt.rb[2] = pos[2];
+        solopt_t solopt[2] = {solopt_default, solopt_default};
+
+        prtkp = rtkprocess_create(&pi, &prcopt, solopt, &rtkcfg);
+        if(prtkp == NULL)
+        {
+            strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_create create failed!");
+            mylog->error(strlog);
+            continue;
+        }
+        handle->listRtkProcess.push_back(prtkp);
+
+
+//        strlist.clear();
+//        strlist.append(pi.device[0].ip);
+//        strlist.append(pi.device[0].port);
+        strlist = pi.device[0].ip + ":" + pi.device[0].port;
+        mapID.insert(strlist, pi.device[0].id);
+//        strlist.clear();
+//        strlist.append(pi.device[1].ip);
+//        strlist.append(pi.device[1].port);
+        strlist = pi.device[1].ip + ":" + pi.device[1].port;
+        mapID.insert(strlist, pi.device[1].id);
+    }
+
+    QList<QString> keys = mapID.uniqueKeys();
+    for(QList<QString>::iterator iter=keys.begin(); iter != keys.end(); iter++)
+    {
+        DataCollect *dc = new DataCollect;
+        int status = -1;
+        QStringList slist;
+
+        if(dc == NULL)
+        {
+            strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "gemhoRtkStart new DataCollect failed!");
+            mylog->error(strlog);
+            continue;
+        }
+
+        slist = (*iter).split(":");
+
+        dc->ip = slist[0];
+        dc->port = slist[1];
+        dc->ids = mapID.values(*iter).toSet();
+        dc->runFlag = 1;
+        dc->quitFlag = 0;
+        dc->listRtkProcess = handle->listRtkProcess;
+
+        status = BSP_thrCreate(&dc->netDevThread, process_DataCollect, BSP_THR_PRI_DEFAULT, BSP_THR_STACK_SIZE_DEFAULT, dc);
+        if(status < 0)
+        {
+            strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "DataCollect thread create failed!");
+            mylog->error(strlog);
+            delete dc;
+            continue;
+        }
+
+        handle->listDataCollect.push_back(dc);
+    }
+
+    return handle;
+}
+#endif
 
 int gemhoRtkProcess(void *pGrtk)
 {
