@@ -5,7 +5,11 @@
 #-------------------------------------------------
 
 QT       += core gui serialport network
-LIBS += -lpthread libwsock32 libws2_32 libwinmm
+LIBS += -lpthread
+
+win32 {
+    LIBS += libwsock32 libws2_32 libwinmm
+}
 
 QT -= gui
 CONFIG += console
