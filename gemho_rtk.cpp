@@ -393,6 +393,7 @@ void *gemhoRtkStart()
         void *prtkp = NULL;
 
         prcopt.mode = PMODE_KINEMA;
+        prcopt.navsys = SYS_GPS|SYS_CMP|SYS_QZS;
         prcopt.modear = 3;
         p[0]=pi.device[1].lat.toDouble()*D2R;
         p[1]=pi.device[1].lon.toDouble()*D2R;
