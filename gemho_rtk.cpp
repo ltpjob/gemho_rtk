@@ -422,6 +422,24 @@ void *gemhoRtkStart()
         strlist.append(pi.device[1].ip);
         strlist.append(pi.device[1].port);
         mapID.insert(strlist, pi.device[1].id);
+
+//        {
+//            FILE *pf1 = fopen("E:/GNSS/67161949555780670670FF52/20170725-67161949555780670670FF52.txt", "rb");
+//            FILE *pf2 = fopen("E:/GNSS/8719512552536752066EFF53/20170725-8719512552536752066EFF53.txt", "rb");
+//            char buf[1024] = "";
+//            int readlen = 0;
+
+//            while(1)
+//            {
+//                readlen = fread(buf, 1, sizeof(buf), pf1);
+//                rtkprocess_pushData(prtkp, "67161949555780670670FF52", buf, readlen);
+//                readlen = fread(buf, 1, sizeof(buf), pf2);
+//                rtkprocess_pushData(prtkp, "8719512552536752066EFF53", buf, readlen);
+
+//                rtkprocess_process(prtkp);
+//            }
+//        }
+
     }
 
     QList<QList<QString>> keys = mapID.uniqueKeys();
