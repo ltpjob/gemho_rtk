@@ -12,6 +12,7 @@ typedef struct tagDeviceInfo{
     QString ip;
     QString port;
     QString type;
+    QString mode;
     QString lat;
     QString lon;
     QString height;

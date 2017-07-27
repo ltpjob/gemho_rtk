@@ -805,7 +805,9 @@ int rtkprocess_process(void *hRtk)
         if(handle->rtkconfig.resultPath != "")
         {
             QString str;
-            str = handle->rtkconfig.resultPath + "/" + handle->pInfo.device[0].id + "_result.txt";
+            str = handle->rtkconfig.resultPath + "/" +
+                    QDateTime::currentDateTime().toString("yyyyMMdd") + "-" +
+                    handle->pInfo.device[0].id + "_result.txt";
             FILE *pf = fopen(str.toStdString().c_str(), "a+");
             if(pf != NULL)
             {
@@ -825,7 +827,7 @@ int rtkprocess_process(void *hRtk)
             /* write solution */
             writesol(svr, i);
             strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_process has answer!!!!!!!");
-            mylog->error(strlog);
+            mylog->info(strlog);
         }
         /* if cpu overload, inclement obs outage counter and break */
         if ((int) (tickget() - tick) >= svr->cycle)

@@ -74,6 +74,15 @@ static int readDevice(QXmlStreamReader *reader, deviceInfo *device)
         reader->readNext();
     }
     while(!reader->isStartElement() && !reader->atEnd() && !reader->hasError());
+    if(reader->name() != "mode")
+        return -1;
+    device->mode = reader->readElementText();
+
+    do
+    {
+        reader->readNext();
+    }
+    while(!reader->isStartElement() && !reader->atEnd() && !reader->hasError());
     if(reader->name() != "lat")
         return -1;
     device->lat = reader->readElementText();
@@ -392,7 +401,14 @@ void *gemhoRtkStart()
         QList<QString> strlist;
         void *prtkp = NULL;
 
-        prcopt.mode = PMODE_KINEMA;
+        if(pi.device[1].mode == "kinematic")
+            prcopt.mode = PMODE_KINEMA;
+        else if(pi.device[1].mode == "static")
+            prcopt.mode = PMODE_STATIC;
+        else
+            prcopt.mode = PMODE_STATIC;
+
+
         prcopt.navsys = SYS_GPS|SYS_CMP|SYS_QZS;
         prcopt.modear = 3;
         p[0]=pi.device[1].lat.toDouble()*D2R;
