@@ -125,7 +125,8 @@ SOURCES += main.cpp\
     log4qt/ttcclayout.cpp \
     log4qt/writerappender.cpp \
     gemho_rtk.cpp \
-    bsp_thr.c
+    bsp_thr.c \
+    rtklib/tersus.c
 
 HEADERS  += datafifo.h \
     rtklib/rtklib.h \

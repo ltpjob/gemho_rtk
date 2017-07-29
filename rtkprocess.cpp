@@ -8,6 +8,66 @@
 #include <QDir>
 #include <QDateTime>
 
+/* baseline length -----------------------------------------------------------*/
+static double baseline_len(const rtk_t *rtk)
+{
+    double dr[3];
+    int i;
+
+    if (norm(rtk->sol.rr,3)<=0.0||norm(rtk->rb,3)<=0.0) return 0.0;
+
+    for (i=0;i<3;i++) {
+        dr[i]=rtk->sol.rr[i]-rtk->rb[i];
+    }
+    return norm(dr,3)*0.001; /* (km) */
+}
+
+static void outrpos(FILE *fp, const double *r, const solopt_t *opt)
+{
+    double pos[3],dms1[3],dms2[3];
+    const char *sep=opt->sep;
+
+    trace(3,"outrpos :\n");
+
+    if (opt->posf==SOLF_LLH||opt->posf==SOLF_ENU) {
+        ecef2pos(r,pos);
+        if (opt->degf) {
+            deg2dms(pos[0]*R2D,dms1,5);
+            deg2dms(pos[1]*R2D,dms2,5);
+            fprintf(fp,"%3.0f%s%02.0f%s%08.5f%s%4.0f%s%02.0f%s%08.5f%s%10.4f",
+                    dms1[0],sep,dms1[1],sep,dms1[2],sep,dms2[0],sep,dms2[1],
+                    sep,dms2[2],sep,pos[2]);
+        }
+        else {
+            fprintf(fp,"%13.9f%s%14.9f%s%10.4f",pos[0]*R2D,sep,pos[1]*R2D,
+                    sep,pos[2]);
+        }
+    }
+    else if (opt->posf==SOLF_XYZ) {
+        fprintf(fp,"%14.4f%s%14.4f%s%14.4f",r[0],sep,r[1],sep,r[2]);
+    }
+}
+
+/* output header -------------------------------------------------------------*/
+static void outMyheader(FILE *fp, const prcopt_t *popt,
+                      const solopt_t *sopt)
+{
+    if (sopt->posf==SOLF_NMEA||sopt->posf==SOLF_STAT) {
+        return;
+    }
+
+    outprcopt(fp,popt);
+
+    if (PMODE_DGPS<=popt->mode&&popt->mode<=PMODE_FIXED&&popt->mode!=PMODE_MOVEB) {
+        fprintf(fp,"%s ref pos   :",COMMENTH);
+        outrpos(fp,popt->rb,sopt);
+        fprintf(fp,"\n");
+    }
+    if (sopt->outhead||sopt->outopt) fprintf(fp,"%s\n",COMMENTH);
+
+    outsolhead(fp,sopt);
+}
+
 static void writesolhead(stream_t *stream, const solopt_t *solopt)
 {
     unsigned char buff[1024];
@@ -807,10 +867,15 @@ int rtkprocess_process(void *hRtk)
             QString str;
             str = handle->rtkconfig.resultPath + "/" +
                     QDateTime::currentDateTime().toString("yyyyMMdd") + "-" +
-                    handle->pInfo.device[0].id + "_result.txt";
+                    handle->pInfo.device[0].id + "_result.pos";
             FILE *pf = fopen(str.toStdString().c_str(), "a+");
             if(pf != NULL)
             {
+                fseek(pf,0,SEEK_END);
+                if(ftell(pf)==0)
+                {
+                    outMyheader(pf, &svr->rtk.opt, &solopt_default);
+                }
                 outsol(pf, &svr->rtk.sol, svr->rtk.rb, &solopt_default);
                 fclose(pf);
             }

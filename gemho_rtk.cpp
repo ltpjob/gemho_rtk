@@ -411,6 +411,9 @@ void *gemhoRtkStart()
 
         prcopt.navsys = SYS_GPS|SYS_CMP|SYS_QZS;
         prcopt.modear = 3;
+        prcopt.ionoopt = IONOOPT_BRDC;
+        prcopt.tropopt = TROPOPT_SAAS;
+
         p[0]=pi.device[1].lat.toDouble()*D2R;
         p[1]=pi.device[1].lon.toDouble()*D2R;
         p[2]=pi.device[1].height.toDouble();
@@ -440,8 +443,8 @@ void *gemhoRtkStart()
         mapID.insert(strlist, pi.device[1].id);
 
 //        {
-//            FILE *pf1 = fopen("E:/GNSS/67161949555780670670FF52/20170725-67161949555780670670FF52.txt", "rb");
-//            FILE *pf2 = fopen("E:/GNSS/8719512552536752066EFF53/20170725-8719512552536752066EFF53.txt", "rb");
+//            FILE *pf1 = fopen("E:/GNSS/67161949555780670670FF52/20170727-67161949555780670670FF52.txt", "rb");
+//            FILE *pf2 = fopen("E:/GNSS/8719512552536752066EFF53/20170727-8719512552536752066EFF53.txt", "rb");
 //            char buf[1024] = "";
 //            int readlen = 0;
 
