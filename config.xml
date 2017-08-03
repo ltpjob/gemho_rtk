@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
-  <savepath>E:/GNSS/</savepath>
-  <resultpath>E:/GNSS/</resultpath>
+  <savepath>/home/ltp/GNSS</savepath>
+  <resultpath>/home/ltp/GNSS</resultpath>
   <pairs>
     <pair>
       <device>
@@ -9,17 +9,17 @@
         <ip>192.168.88.5</ip>
         <port>5566</port>
         <type>rover</type>
-		<mode>static</mode>
-        <lat>37.518611111</lat>
-        <lon>122.042777778</lon>
-        <height>20.0000</height>
+	<mode>static</mode>
+        <lat>37.519403750</lat>
+        <lon>122.042180417</lon>
+        <height>6.1500</height>
       </device>
       <device>
         <id>8719512552536752066EFF53</id>
         <ip>192.168.88.6</ip>
         <port>5566</port>
         <type>base</type>
-		<mode>static</mode>
+	<mode>static</mode>
         <lat>37.408400528</lat>
         <lon>122.218363917</lon>
         <height>69.40</height>
