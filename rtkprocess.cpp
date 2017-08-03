@@ -88,6 +88,7 @@ static void saveoutbuf(rtksvr_t *svr, unsigned char *buff, int n, int index)
     rtksvrunlock(svr);
 }
 
+/* periodic command ----------------------------------------------------------*/
 static void periodic_cmd(int cycle, const char *cmd, stream_t *stream)
 {
     const char *p=cmd,*q;
@@ -102,6 +103,7 @@ static void periodic_cmd(int cycle, const char *cmd, stream_t *stream)
         if ((r=strrchr(msg,'#'))) {
             sscanf(r,"# %d",&period);
             *r='\0';
+            while (*--r==' ') *r='\0'; /* delete tail spaces */
         }
         if (period<=0) period=1000;
         if (*msg&&cycle%period==0) {

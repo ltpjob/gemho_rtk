@@ -13,12 +13,15 @@
 #include "rtkprocess.h"
 #include "bsp_thr.h"
 #include <unistd.h>
+
+#pragma pack(1)
 typedef struct tagupComDataHead
 {
     quint8  start[2];
     qint16 type;
     qint32 size;
-} __attribute__((packed)) upComDataHead;
+}upComDataHead;
+#pragma pack()
 
 static int readDevice(QXmlStreamReader *reader, deviceInfo *device)
 {
