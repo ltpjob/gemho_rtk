@@ -904,39 +904,41 @@ int rtkprocess_process(void *hRtk)
             break;
 #endif
         }
-        /* send null solution if no solution (1hz) */
-        if (svr->rtk.sol.stat == SOLQ_NONE && (int) (tick - tick1hz) >= 1000)
-        {
-            writesol(svr, 0);
-            tick1hz = tick;
-        }
-        /* write periodic command to input stream */
-        for (i = 0; i < 3; i++)
-        {
-            periodic_cmd(cycle * svr->cycle, svr->cmds_periodic[i], svr->stream + i);
-        }
-        /* send nmea request to base/nrtk input stream */
-        if (svr->nmeacycle > 0 && (int) (tick - ticknmea) >= svr->nmeacycle)
-        {
-            if (svr->stream[1].state == 1)
-            {
-                if (svr->nmeareq == 1)
-                {
-                    sol_nmea.stat = SOLQ_SINGLE;
-                    sol_nmea.time = utc2gpst(timeget());
-                    matcpy(sol_nmea.rr, svr->nmeapos, 3, 1);
-                    strsendnmea(svr->stream + 1, &sol_nmea);
-                }
-                else if (svr->nmeareq == 2 && norm(svr->rtk.sol.rr, 3) > 0.0)
-                {
-                    strsendnmea(svr->stream + 1, &svr->rtk.sol);
-                }
-            }
-            ticknmea = tick;
-        }
-        if ((cputime = (int) (tickget() - tick)) > 0)
-            svr->cputime = cputime;
     }
+
+    /* send null solution if no solution (1hz) */
+    if (svr->rtk.sol.stat == SOLQ_NONE && (int) (tick - tick1hz) >= 1000)
+    {
+        writesol(svr, 0);
+        tick1hz = tick;
+    }
+    /* write periodic command to input stream */
+    for (i = 0; i < 3; i++)
+    {
+        periodic_cmd(cycle * svr->cycle, svr->cmds_periodic[i], svr->stream + i);
+    }
+    /* send nmea request to base/nrtk input stream */
+    if (svr->nmeacycle > 0 && (int) (tick - ticknmea) >= svr->nmeacycle)
+    {
+        if (svr->stream[1].state == 1)
+        {
+            if (svr->nmeareq == 1)
+            {
+                sol_nmea.stat = SOLQ_SINGLE;
+                sol_nmea.time = utc2gpst(timeget());
+                matcpy(sol_nmea.rr, svr->nmeapos, 3, 1);
+                strsendnmea(svr->stream + 1, &sol_nmea);
+            }
+            else if (svr->nmeareq == 2 && norm(svr->rtk.sol.rr, 3) > 0.0)
+            {
+                strsendnmea(svr->stream + 1, &svr->rtk.sol);
+            }
+        }
+        ticknmea = tick;
+    }
+    if ((cputime = (int) (tickget() - tick)) > 0)
+        svr->cputime = cputime;
+
 
     return 0;
 }
