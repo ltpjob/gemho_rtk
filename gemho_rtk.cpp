@@ -8,6 +8,7 @@
 #include <QDebug>
 #include <QtNetwork>
 #include <QTime>
+#include <QtSql>
 #include "mylog.h"
 #include "gemho_rtk.h"
 #include "rtkprocess.h"
@@ -187,6 +188,8 @@ typedef struct tagDataCollect{
 typedef struct tagGemhoRtk{
     QList<void *> listRtkProcess;
     QList<DataCollect *> listDataCollect;
+    QSqlDatabase dbDataSave;
+    QDateTime uptime;
 }GemhoRtk;
 
 static void *process_DataCollect(void *args)
@@ -282,7 +285,7 @@ static void *process_DataCollect(void *args)
 //            printf("%d\n", client.bytesAvailable());
             if(client.bytesAvailable()>0 || client.waitForReadyRead(1000))
             {
-                if(client.bytesAvailable() >= sizeof(upComDataHead))
+                if(client.bytesAvailable() >= (qint64)sizeof(upComDataHead))
                 {
                     qint64 readSize = 0;
                     char buffer[1024] = "";
@@ -376,6 +379,56 @@ static void *process_DataCollect(void *args)
     return NULL;
 }
 
+static int gemhoRtkDataInsert(void *pGrtk, RtkOutSolution sol)
+{
+    GemhoRtk *handle = (GemhoRtk *)pGrtk;
+    QString strlog;
+
+    if(handle == NULL)
+    {
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "gemhoRtkDataInsert handle NULL!");
+        mylog->error(strlog);
+        return -1;
+    }
+
+    QSqlQuery query(handle->dbDataSave);
+    QString strSql;
+    strSql = "INSERT INTO `RTK`.`rtk_result_data`"
+             "(`id`,`localtime_res`,`localtime_real`,`runtime`,`baseline`,`latitude`,`longitude`,`height`,"
+             "`Q`,`ns`,`sdn`,`sde`,`sdu`,`sdne`,`sdeu`,`sdun`,`age`,`ratio`)"
+             "VALUES(:id,:localtime_res,:localtime_real,:runtime,:baseline,:latitude,:longitude,:height,"
+             ":Q,:ns,:sdn,:sde,:sdu,:sdne,:sdeu,:sdun,:age,:ratio);";
+    query.prepare(strSql);
+    query.bindValue(":id", sol.id);
+    query.bindValue(":localtime_res", QDateTime::currentDateTime().toLocalTime().toString("yyyy-MM-dd hh:mm:ss"));
+    query.bindValue(":localtime_real", sol.GPST.toLocalTime().toString("yyyy-MM-dd hh:mm:ss"));
+    query.bindValue(":runtime", QString("%1").arg(handle->uptime.secsTo(QDateTime::currentDateTime())/3600.0, 0, 'f', 2).toDouble());
+    query.bindValue(":baseline", sol.baseline);
+    query.bindValue(":latitude", sol.latitude);
+    query.bindValue(":longitude", sol.longitude);
+    query.bindValue(":height", sol.height);
+    query.bindValue(":Q", sol.Q);
+    query.bindValue(":ns", sol.ns);
+    query.bindValue(":sdn", sol.sdn);
+    query.bindValue(":sde", sol.sde);
+    query.bindValue(":sdu", sol.sdu);
+    query.bindValue(":sdne", sol.sdne);
+    query.bindValue(":sdeu", sol.sdeu);
+    query.bindValue(":sdun", sol.sdun);
+    query.bindValue(":age", sol.age);
+    query.bindValue(":ratio", sol.ratio);
+    query.exec();
+
+    if(query.lastError().type() != QSqlError::NoError)
+    {
+        strlog.sprintf("[%s][%s][%d]database err:", __FILE__, __func__, __LINE__);
+        strlog += query.lastError().text();
+        mylog->error(strlog);
+    }
+
+    return 0;
+}
+
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 6, 0))
 void *gemhoRtkStart()
 {
@@ -394,6 +447,44 @@ void *gemhoRtkStart()
     }
 
     readxml(&list, &rtkcfg);
+
+    handle->uptime = QDateTime::currentDateTime();
+
+    handle->dbDataSave = QSqlDatabase::addDatabase("QMYSQL");
+    handle->dbDataSave.setHostName("127.0.0.1");
+    handle->dbDataSave.setDatabaseName("RTK");
+    handle->dbDataSave.setUserName("root");
+    handle->dbDataSave.setPassword("root");
+    if (!handle->dbDataSave.open()) /*测试数据库是否链接成功*/
+    {
+       strlog.sprintf("[%s][%s][%d]database err:%s", __FILE__, __func__, __LINE__, handle->dbDataSave.lastError().text().toStdString().c_str());
+       mylog->error(strlog);
+    }
+    else
+    {
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "connect database success!");
+        mylog->info(strlog);
+    }
+
+    if(handle->dbDataSave.isOpen())
+    {
+        QSqlQuery query(handle->dbDataSave);
+        QString strSql;
+        strSql = "CREATE TABLE If Not Exists `rtk_result_data` (  `id` varchar(45) NOT NULL,  `localtime_res` datetime NOT NULL,  "
+                 "`localtime_real` datetime NOT NULL,  `runtime` double NOT NULL,  `baseline` varchar(45) NOT NULL,  "
+              "`latitude` varchar(45) NOT NULL,  `longitude`varchar(45) NOT NULL,  `height` varchar(45) NOT NULL,  `Q` varchar(45) NOT NULL,  "
+              "`ns` varchar(45) NOT NULL,  `sdn` varchar(45) NOT NULL,  `sde` varchar(45) NOT NULL,  `sdu` varchar(45) NOT NULL,  "
+              "`sdne` varchar(45) NOT NULL,  `sdeu` varchar(45) NOT NULL,  `sdun` varchar(45) NOT NULL,  `age` varchar(45) NOT NULL,  "
+              "`ratio` varchar(45) NOT NULL,  PRIMARY KEY (`id`,`localtime_res`)) ENGINE=InnoDB DEFAULT CHARSET=latin1;";
+        query.exec(strSql);
+        if(query.lastError().type() != QSqlError::NoError)
+        {
+            strlog.sprintf("[%s][%s][%d]database err:", __FILE__, __func__, __LINE__);
+            strlog += query.lastError().text();
+            mylog->error(strlog);
+        }
+
+    }
 
     for(QList<pairInfo>::iterator iter = list.begin(); iter != list.end(); iter++)
     {
@@ -446,8 +537,8 @@ void *gemhoRtkStart()
         mapID.insert(strlist, pi.device[1].id);
 
 //        {
-//            FILE *pf1 = fopen("E:/GNSS/67161949555780670670FF52/20170727-67161949555780670670FF52.txt", "rb");
-//            FILE *pf2 = fopen("E:/GNSS/8719512552536752066EFF53/20170727-8719512552536752066EFF53.txt", "rb");
+//            FILE *pf1 = fopen("/home/ltp/GNSS/20170727-67161949555780670670FF52.txt", "rb");
+//            FILE *pf2 = fopen("/home/ltp/GNSS/20170727-8719512552536752066EFF53.txt", "rb");
 //            char buf[1024] = "";
 //            int readlen = 0;
 
@@ -458,7 +549,51 @@ void *gemhoRtkStart()
 //                readlen = fread(buf, 1, sizeof(buf), pf2);
 //                rtkprocess_pushData(prtkp, "8719512552536752066EFF53", buf, readlen);
 
+////                rtkprocess_process(prtkp);
+////                RtkOutSolution now;
+////                RtkOutSolution best;
+////                rtkprocess_getSolAll(prtkp, &now, &best);
+
+//                RtkOutSolution bestSol;
+//                QDateTime lastPtime;
+//                QDateTime now;
+
 //                rtkprocess_process(prtkp);
+
+//                usleep(200*1000);
+
+//                rtkprocess_getLastProcTime(prtkp, &lastPtime);
+//                now = QDateTime::currentDateTime();
+//                if(handle->uptime.secsTo(now) >= 60 &&
+//                        now.time().minute() != lastPtime.time().minute())
+//                {
+//                    rtkprocess_getSolBest(prtkp, &bestSol);
+
+//                    if(bestSol.status == 0)
+//                    {
+//                        QDateTime date;
+//                        date.setMSecsSinceEpoch(0);
+//                        bestSol.GPST = date;
+//                        bestSol.latitude = "0";
+//                        bestSol.longitude = "0";
+//                        bestSol.height = "0";
+//                        bestSol.Q = bestSol.Q;
+//                        bestSol.ns = "0";
+//                        bestSol.sdn = "0";
+//                        bestSol.sde = "0";
+//                        bestSol.sdu = "0";
+//                        bestSol.sdne =  "0";
+//                        bestSol.sdeu = "0";
+//                        bestSol.sdun = "0";
+//                        bestSol.age = "0";
+//                        bestSol.ratio = "0";
+//                        bestSol.baseline = "0";
+//                    }
+
+//                    gemhoRtkDataInsert(handle, bestSol);
+//                    rtkprocess_resetBestSol(prtkp);
+//                    rtkprocess_setLastProcTime(prtkp, QDateTime::currentDateTime());
+//                }
 //            }
 //        }
 
@@ -571,8 +706,8 @@ void *gemhoRtkStart()
         mapID.insert(strlist, pi.device[1].id);
 
 //        {
-//            FILE *pf1 = fopen("E:/GNSS/67161949555780670670FF52/20170727-67161949555780670670FF52.txt", "rb");
-//            FILE *pf2 = fopen("E:/GNSS/8719512552536752066EFF53/20170727-8719512552536752066EFF53.txt", "rb");
+//            FILE *pf1 = fopen("/home/ltp/GNSS/20170727-67161949555780670670FF52.txt", "rb");
+//            FILE *pf2 = fopen("/home/ltp/GNSS/20170727-8719512552536752066EFF53.txt", "rb");
 //            char buf[1024] = "";
 //            int readlen = 0;
 
@@ -583,7 +718,51 @@ void *gemhoRtkStart()
 //                readlen = fread(buf, 1, sizeof(buf), pf2);
 //                rtkprocess_pushData(prtkp, "8719512552536752066EFF53", buf, readlen);
 
+//                //                rtkprocess_process(prtkp);
+//                //                RtkOutSolution now;
+//                //                RtkOutSolution best;
+//                //                rtkprocess_getSolAll(prtkp, &now, &best);
+
+//                RtkOutSolution bestSol;
+//                QDateTime lastPtime;
+//                QDateTime now;
+
 //                rtkprocess_process(prtkp);
+
+//                usleep(200*1000);
+
+//                rtkprocess_getLastProcTime(prtkp, &lastPtime);
+//                now = QDateTime::currentDateTime();
+//                if(handle->uptime.secsTo(now) >= 60 &&
+//                        now.time().minute() != lastPtime.time().minute())
+//                {
+//                    rtkprocess_getSolBest(prtkp, &bestSol);
+
+//                    if(bestSol.status == 0)
+//                    {
+//                        QDateTime date;
+//                        date.setMSecsSinceEpoch(0);
+//                        bestSol.GPST = date;
+//                        bestSol.latitude = "0";
+//                        bestSol.longitude = "0";
+//                        bestSol.height = "0";
+//                        bestSol.Q = bestSol.Q;
+//                        bestSol.ns = "0";
+//                        bestSol.sdn = "0";
+//                        bestSol.sde = "0";
+//                        bestSol.sdu = "0";
+//                        bestSol.sdne =  "0";
+//                        bestSol.sdeu = "0";
+//                        bestSol.sdun = "0";
+//                        bestSol.age = "0";
+//                        bestSol.ratio = "0";
+//                        bestSol.baseline = "0";
+//                    }
+
+//                    gemhoRtkDataInsert(handle, bestSol);
+//                    rtkprocess_resetBestSol(prtkp);
+//                    rtkprocess_setLastProcTime(prtkp, QDateTime::currentDateTime());
+//                }
 //            }
 //        }
     }
@@ -642,7 +821,45 @@ int gemhoRtkProcess(void *pGrtk)
     QList<void *> &listrtkp = handle->listRtkProcess;
     for(QList<void *>::iterator iter=listrtkp.begin(); iter!=listrtkp.end(); iter++)
     {
+        RtkOutSolution bestSol;
+        QDateTime lastPtime;
+        QDateTime now;
+
         rtkprocess_process(*iter);
+
+        rtkprocess_getLastProcTime(*iter, &lastPtime);
+
+        now = QDateTime::currentDateTime();
+        if(handle->uptime.secsTo(now) >= 60*60 &&
+                now.time().hour() != lastPtime.time().hour())
+        {
+            rtkprocess_getSolBest(*iter, &bestSol);
+
+            if(bestSol.status == 0)
+            {
+                QDateTime date;
+                date.setMSecsSinceEpoch(0);
+                bestSol.GPST = date;
+                bestSol.latitude = "0";
+                bestSol.longitude = "0";
+                bestSol.height = "0";
+                bestSol.Q = bestSol.Q;
+                bestSol.ns = "0";
+                bestSol.sdn = "0";
+                bestSol.sde = "0";
+                bestSol.sdu = "0";
+                bestSol.sdne =  "0";
+                bestSol.sdeu = "0";
+                bestSol.sdun = "0";
+                bestSol.age = "0";
+                bestSol.ratio = "0";
+                bestSol.baseline = "0";
+            }
+
+            gemhoRtkDataInsert(handle, bestSol);
+            rtkprocess_resetBestSol(*iter);
+            rtkprocess_setLastProcTime(*iter, QDateTime::currentDateTime());
+        }
     }
 
     return 0;

@@ -8,6 +8,8 @@
 #include <QDir>
 #include <QDateTime>
 
+#define SQRT(x)    ((x)<0.0?0.0:sqrt(x))
+
 /* baseline length -----------------------------------------------------------*/
 static double baseline_len(const rtk_t *rtk)
 {
@@ -89,29 +91,29 @@ static void saveoutbuf(rtksvr_t *svr, unsigned char *buff, int n, int index)
 }
 
 /* periodic command ----------------------------------------------------------*/
-static void periodic_cmd(int cycle, const char *cmd, stream_t *stream)
-{
-    const char *p=cmd,*q;
-    char msg[1024],*r;
-    int n,period;
+//static void periodic_cmd(int cycle, const char *cmd, stream_t *stream)
+//{
+//    const char *p=cmd,*q;
+//    char msg[1024],*r;
+//    int n,period;
 
-    for (p=cmd;;p=q+1) {
-        for (q=p;;q++) if (*q=='\r'||*q=='\n'||*q=='\0') break;
-        n=(int)(q-p); strncpy(msg,p,n); msg[n]='\0';
+//    for (p=cmd;;p=q+1) {
+//        for (q=p;;q++) if (*q=='\r'||*q=='\n'||*q=='\0') break;
+//        n=(int)(q-p); strncpy(msg,p,n); msg[n]='\0';
 
-        period=0;
-        if ((r=strrchr(msg,'#'))) {
-            sscanf(r,"# %d",&period);
-            *r='\0';
-            while (*--r==' ') *r='\0'; /* delete tail spaces */
-        }
-        if (period<=0) period=1000;
-        if (*msg&&cycle%period==0) {
-            strsendcmd(stream,msg);
-        }
-        if (!*q) break;
-    }
-}
+//        period=0;
+//        if ((r=strrchr(msg,'#'))) {
+//            sscanf(r,"# %d",&period);
+//            *r='\0';
+//            while (*--r==' ') *r='\0'; /* delete tail spaces */
+//        }
+//        if (period<=0) period=1000;
+//        if (*msg&&cycle%period==0) {
+//            strsendcmd(stream,msg);
+//        }
+//        if (!*q) break;
+//    }
+//}
 
 static void writesol(rtksvr_t *svr, int index)
 {
@@ -613,7 +615,8 @@ typedef struct tagRtkPocHandle
     QMap<QString, DataFifo*> mapData;
     pairInfo pInfo;
     RtkConfig rtkconfig;
-
+    sol_t  sol_best;
+    QDateTime last_porcessTime;
 }RtkPocHandle;
 
 void *rtkprocess_create(pairInfo *pInfo, prcopt_t *prcopt, solopt_t *solopt, RtkConfig *pRtkcfg)
@@ -627,7 +630,6 @@ void *rtkprocess_create(pairInfo *pInfo, prcopt_t *prcopt, solopt_t *solopt, Rtk
         mylog->error(strlog);
         return handle;
     }
-
 
     double pos[3] = { 0, 0, 0 }, nmeapos[3] = { 0, 0, 0 };
     int format[MAXSTRRTK] = { STRFMT_UBX, STRFMT_UBX, STRFMT_UBX };
@@ -651,6 +653,9 @@ void *rtkprocess_create(pairInfo *pInfo, prcopt_t *prcopt, solopt_t *solopt, Rtk
     handle->mapData[pInfo->device[1].id] = new DataFifo;
     handle->pInfo = *pInfo;
     handle->rtkconfig = *pRtkcfg;
+    memset(&handle->sol_best, 0, sizeof(handle->sol_best));
+    handle->last_porcessTime = QDateTime::currentDateTime();
+
 
 
     return handle;
@@ -775,7 +780,7 @@ int rtkprocess_process(void *hRtk)
     unsigned int tick,ticknmea,tick1hz;
     unsigned char *p,*q;
     char msg[128];
-    int i,j,n,fobs[3]={0},cycle,cputime,loops;
+    int i,j,n,fobs[3]={0},/*cycle,*/cputime,loops;
     rtksvr_t *svr = &handle->rtkServer;
 
     tracet(3, "rtksvrthread:\n");
@@ -858,7 +863,7 @@ int rtkprocess_process(void *hRtk)
         }
         /* rtk positioning */
 
-        tracelevel(6);
+        tracelevel(0);
         rtksvrlock(svr);
         rtkpos(&svr->rtk, obs.data, obs.n, &svr->nav);
         rtksvrunlock(svr);
@@ -883,6 +888,16 @@ int rtkprocess_process(void *hRtk)
             }
         }
 
+        rtksvrlock(svr);
+        if (svr->rtk.sol.stat != SOLQ_NONE)
+        {
+            if(svr->rtk.sol.stat <= handle->sol_best.stat)
+            {
+                handle->sol_best = svr->rtk.sol;
+            }
+        }
+        rtksvrunlock(svr);
+
 
         if (svr->rtk.sol.stat != SOLQ_NONE)
         {
@@ -893,8 +908,8 @@ int rtkprocess_process(void *hRtk)
 
             /* write solution */
             writesol(svr, i);
-            strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_process has answer!!!!!!!");
-            mylog->info(strlog);
+            strlog.sprintf("[%s][%s][%d]rtkprocess_process %s get solution!!!!!!!", __FILE__, __func__, __LINE__, handle->pInfo.device[0].id.toStdString().c_str());
+            mylog_console->info(strlog);
         }
         /* if cpu overload, inclement obs outage counter and break */
         if ((int) (tickget() - tick) >= svr->cycle)
@@ -912,11 +927,11 @@ int rtkprocess_process(void *hRtk)
         writesol(svr, 0);
         tick1hz = tick;
     }
-    /* write periodic command to input stream */
-    for (i = 0; i < 3; i++)
-    {
-        periodic_cmd(cycle * svr->cycle, svr->cmds_periodic[i], svr->stream + i);
-    }
+//    /* write periodic command to input stream */
+//    for (i = 0; i < 3; i++)
+//    {
+//        periodic_cmd(cycle * svr->cycle, svr->cmds_periodic[i], svr->stream + i);
+//    }
     /* send nmea request to base/nrtk input stream */
     if (svr->nmeacycle > 0 && (int) (tick - ticknmea) >= svr->nmeacycle)
     {
@@ -943,16 +958,194 @@ int rtkprocess_process(void *hRtk)
     return 0;
 }
 
+/* solution option to field separator ----------------------------------------*/
+static const char *opt2sep(const solopt_t *opt)
+{
+    if (!*opt->sep) return " ";
+    else if (!strcmp(opt->sep,"\\t")) return "\t";
+    return opt->sep;
+}
+
+/* solution to covariance ----------------------------------------------------*/
+static void soltocov(const sol_t *sol, double *P)
+{
+    P[0]     =sol->qr[0]; /* xx or ee */
+    P[4]     =sol->qr[1]; /* yy or nn */
+    P[8]     =sol->qr[2]; /* zz or uu */
+    P[1]=P[3]=sol->qr[3]; /* xy or en */
+    P[5]=P[7]=sol->qr[4]; /* yz or nu */
+    P[2]=P[6]=sol->qr[5]; /* zx or ue */
+}
+
+/* sqrt of covariance --------------------------------------------------------*/
+static double sqvar(double covar)
+{
+    return covar<0.0?-sqrt(-covar):sqrt(covar);
+}
+
+static int sol_convert(void *hRtk, const sol_t *sol, const solopt_t *opt, double *rb, RtkOutSolution *out)
+{
+    RtkPocHandle *handle = (RtkPocHandle *)hRtk;
+    double pos[3],P[9],Q[9];
+    double dr[3];
+    double baseline_len;
+    QDateTime date;
+
+    QString strlog;
+
+    if(handle == NULL)
+    {
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "sol_convert NULL handle!!!!!!!");
+        mylog->error(strlog);
+        return -1;
+    }
+
+    ecef2pos(sol->rr,pos);
+    soltocov(sol,P);
+    covenu(pos,P,Q);
+    if (opt->height==1)
+    { /* geodetic height */
+        pos[2]-=geoidh(pos);
+    }
+
+    out->id = handle->pInfo.device[0].id;
+    out->Q = QString("%1").arg(sol->stat);
+    out->status = sol->stat;
+    if(out->status == 0)
+        return -1;
+
+    if(norm(sol->rr,3)<=0.0||norm(rb,3)<=0.0)
+        baseline_len = 0;
+    else
+    {
+        for (int i=0;i<3;i++)
+        {
+            dr[i]=sol->rr[i]-rb[i];
+        }
+        baseline_len = norm(dr,3); /* (m) */
+    }
+
+    date.setMSecsSinceEpoch((sol->time.sec+sol->time.time)*1000);
+    out->GPST = date;
+    out->latitude = QString("%1").arg(pos[0]*R2D, 0, 'f', 9);
+    out->longitude = QString("%1").arg(pos[1]*R2D, 0, 'f', 9);
+    out->height = QString("%1").arg(pos[2], 0, 'f', 4);
+    out->ns = QString("%1").arg(sol->ns);
+    out->sdn = QString("%1").arg(SQRT(Q[4]), 0, 'f', 4);
+    out->sde = QString("%1").arg(SQRT(Q[0]), 0, 'f', 4);
+    out->sdu = QString("%1").arg(SQRT(Q[8]), 0, 'f', 4);
+    out->sdne = QString("%1").arg(sqvar(Q[1]), 0, 'f', 4);
+    out->sdeu = QString("%1").arg(sqvar(Q[2]), 0, 'f', 4);
+    out->sdun = QString("%1").arg(sqvar(Q[5]), 0, 'f', 4);
+    out->age = QString("%1").arg(sol->age, 0, 'f', 2);
+    out->ratio = QString("%1").arg(sol->ratio, 0, 'f', 1);
+    out->baseline = QString("%1").arg(baseline_len, 0, 'f', 4);
+
+    return 0;
+}
+
+int rtkprocess_getSolAll(void *hRtk, RtkOutSolution *now, RtkOutSolution *best)
+{
+    RtkPocHandle *handle = (RtkPocHandle *)hRtk;
+    rtksvr_t *svr = &handle->rtkServer;
+    QString strlog;
+
+    if(handle == NULL)
+    {
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_getSolAll NULL handle!!!!!!!");
+        mylog->error(strlog);
+        return -1;
+    }
+
+    rtksvrlock(svr);
+    sol_convert(hRtk, &svr->rtk.sol, svr->solopt, svr->rtk.rb, now);
+    sol_convert(hRtk, &handle->sol_best, svr->solopt, svr->rtk.rb, best);
+    rtksvrunlock(svr);
+
+    return 0;
+}
+
+int rtkprocess_getSolBest(void *hRtk, RtkOutSolution *best)
+{
+    RtkPocHandle *handle = (RtkPocHandle *)hRtk;
+    rtksvr_t *svr = &handle->rtkServer;
+    QString strlog;
+
+    if(handle == NULL)
+    {
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_getSolBest NULL handle!!!!!!!");
+        mylog->error(strlog);
+        return -1;
+    }
+
+    rtksvrlock(svr);
+    sol_convert(hRtk, &handle->sol_best, svr->solopt, svr->rtk.rb, best);
+    rtksvrunlock(svr);
+
+    return 0;
+}
 
 
+int rtkprocess_resetBestSol(void *hRtk)
+{
+    RtkPocHandle *handle = (RtkPocHandle *)hRtk;
+    rtksvr_t *svr = &handle->rtkServer;
+    QString strlog;
+
+    if(handle == NULL)
+    {
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_resetBestSol NULL handle!!!!!!!");
+        mylog->error(strlog);
+        return -1;
+    }
+
+    rtksvrlock(svr);
+    memset(&handle->sol_best, 0, sizeof(handle->sol_best));
+    rtksvrunlock(svr);
+
+    return 0;
+}
+
+int rtkprocess_getLastProcTime(void *hRtk, QDateTime *lastPtime)
+{
+    RtkPocHandle *handle = (RtkPocHandle *)hRtk;
+    rtksvr_t *svr = &handle->rtkServer;
+    QString strlog;
+
+    if(handle == NULL)
+    {
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_getLastProcTime NULL handle!!!!!!!");
+        mylog->error(strlog);
+        return -1;
+    }
+
+    rtksvrlock(svr);
+    *lastPtime = handle->last_porcessTime;
+    rtksvrunlock(svr);
+
+    return 0;
+}
 
 
+int rtkprocess_setLastProcTime(void *hRtk, QDateTime Ptime)
+{
+    RtkPocHandle *handle = (RtkPocHandle *)hRtk;
+    rtksvr_t *svr = &handle->rtkServer;
+    QString strlog;
 
+    if(handle == NULL)
+    {
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_setLastProcTime NULL handle!!!!!!!");
+        mylog->error(strlog);
+        return -1;
+    }
 
+    rtksvrlock(svr);
+    handle->last_porcessTime = Ptime;
+    rtksvrunlock(svr);
 
-
-
-
+    return 0;
+}
 
 
 
