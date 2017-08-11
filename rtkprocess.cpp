@@ -782,6 +782,7 @@ int rtkprocess_process(void *hRtk)
     char msg[128];
     int i,j,n,fobs[3]={0},/*cycle,*/cputime,loops;
     rtksvr_t *svr = &handle->rtkServer;
+    int pri[]={MAXSOLQ+1,1,2,3,4,5,1,6};
 
     tracet(3, "rtksvrthread:\n");
 
@@ -891,7 +892,7 @@ int rtkprocess_process(void *hRtk)
         rtksvrlock(svr);
         if (svr->rtk.sol.stat != SOLQ_NONE)
         {
-            if(svr->rtk.sol.stat <= handle->sol_best.stat)
+            if(pri[svr->rtk.sol.stat] <= pri[handle->sol_best.stat])
             {
                 handle->sol_best = svr->rtk.sol;
             }

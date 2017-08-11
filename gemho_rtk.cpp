@@ -391,6 +391,20 @@ static int gemhoRtkDataInsert(void *pGrtk, RtkOutSolution sol)
         return -1;
     }
 
+    if(handle->dbDataSave.isOpen() == false)
+    {
+        strlog.sprintf("[%s][%s][%d]database err:%s", __FILE__, __func__, __LINE__, handle->dbDataSave.lastError().text().toStdString().c_str());
+        mylog->error(strlog);
+
+        if (!handle->dbDataSave.open()) /*测试数据库是否链接成功*/
+        {
+           strlog.sprintf("[%s][%s][%d]database err:%s", __FILE__, __func__, __LINE__, handle->dbDataSave.lastError().text().toStdString().c_str());
+           mylog->error(strlog);
+        }
+
+        return -1;
+    }
+
     QSqlQuery query(handle->dbDataSave);
     QString strSql;
     strSql = "INSERT INTO `RTK`.`rtk_result_data`"
@@ -424,6 +438,7 @@ static int gemhoRtkDataInsert(void *pGrtk, RtkOutSolution sol)
         strlog.sprintf("[%s][%s][%d]database err:", __FILE__, __func__, __LINE__);
         strlog += query.lastError().text();
         mylog->error(strlog);
+        handle->dbDataSave.close();
     }
 
     return 0;
@@ -560,12 +575,12 @@ void *gemhoRtkStart()
 
 //                rtkprocess_process(prtkp);
 
-//                usleep(200*1000);
+//                usleep(20*1000);
 
 //                rtkprocess_getLastProcTime(prtkp, &lastPtime);
 //                now = QDateTime::currentDateTime();
-//                if(handle->uptime.secsTo(now) >= 60 &&
-//                        now.time().minute() != lastPtime.time().minute())
+//                if(handle->uptime.secsTo(now) >= 1 &&
+//                        now.time().second() != lastPtime.time().second())
 //                {
 //                    rtkprocess_getSolBest(prtkp, &bestSol);
 
