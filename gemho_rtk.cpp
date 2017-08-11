@@ -653,6 +653,44 @@ void *gemhoRtkStart()
 
     readxml(&list, &rtkcfg);
 
+    handle->uptime = QDateTime::currentDateTime();
+
+    handle->dbDataSave = QSqlDatabase::addDatabase("QMYSQL");
+    handle->dbDataSave.setHostName("127.0.0.1");
+    handle->dbDataSave.setDatabaseName("RTK");
+    handle->dbDataSave.setUserName("root");
+    handle->dbDataSave.setPassword("root");
+    if (!handle->dbDataSave.open()) /*测试数据库是否链接成功*/
+    {
+       strlog.sprintf("[%s][%s][%d]database err:%s", __FILE__, __func__, __LINE__, handle->dbDataSave.lastError().text().toStdString().c_str());
+       mylog->error(strlog);
+    }
+    else
+    {
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "connect database success!");
+        mylog->info(strlog);
+    }
+
+    if(handle->dbDataSave.isOpen())
+    {
+        QSqlQuery query(handle->dbDataSave);
+        QString strSql;
+        strSql = "CREATE TABLE If Not Exists `rtk_result_data` (  `id` varchar(45) NOT NULL,  `localtime_res` datetime NOT NULL,  "
+                 "`localtime_real` datetime NOT NULL,  `runtime` double NOT NULL,  `baseline` varchar(45) NOT NULL,  "
+              "`latitude` varchar(45) NOT NULL,  `longitude`varchar(45) NOT NULL,  `height` varchar(45) NOT NULL,  `Q` varchar(45) NOT NULL,  "
+              "`ns` varchar(45) NOT NULL,  `sdn` varchar(45) NOT NULL,  `sde` varchar(45) NOT NULL,  `sdu` varchar(45) NOT NULL,  "
+              "`sdne` varchar(45) NOT NULL,  `sdeu` varchar(45) NOT NULL,  `sdun` varchar(45) NOT NULL,  `age` varchar(45) NOT NULL,  "
+              "`ratio` varchar(45) NOT NULL,  PRIMARY KEY (`id`,`localtime_res`)) ENGINE=InnoDB DEFAULT CHARSET=latin1;";
+        query.exec(strSql);
+        if(query.lastError().type() != QSqlError::NoError)
+        {
+            strlog.sprintf("[%s][%s][%d]database err:", __FILE__, __func__, __LINE__);
+            strlog += query.lastError().text();
+            mylog->error(strlog);
+        }
+
+    }
+
     for(QList<pairInfo>::iterator iter = list.begin(); iter != list.end(); iter++)
     {
         double p[3]={0};
