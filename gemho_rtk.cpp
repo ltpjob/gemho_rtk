@@ -435,10 +435,11 @@ static int gemhoRtkDataInsert(void *pGrtk, RtkOutSolution sol)
 
     if(query.lastError().type() != QSqlError::NoError)
     {
-        strlog.sprintf("[%s][%s][%d]database err:", __FILE__, __func__, __LINE__);
+        strlog.sprintf("[%s][%s][%d]database err(%d):", __FILE__, __func__, __LINE__, query.lastError().type());
         strlog += query.lastError().text();
         mylog->error(strlog);
-        handle->dbDataSave.close();
+        if(query.lastError().type() == QSqlError::StatementError)
+            handle->dbDataSave.close();
     }
 
     return 0;
@@ -579,7 +580,7 @@ void *gemhoRtkStart()
 
 //                rtkprocess_getLastProcTime(prtkp, &lastPtime);
 //                now = QDateTime::currentDateTime();
-//                if(handle->uptime.secsTo(now) >= 1 &&
+//                if(handle->uptime.secsTo(now) >= 20 &&
 //                        now.time().second() != lastPtime.time().second())
 //                {
 //                    rtkprocess_getSolBest(prtkp, &bestSol);
