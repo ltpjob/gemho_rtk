@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui serialport network sql
+QT       += core gui network sql
 LIBS += -lpthread
 
 win32 {
