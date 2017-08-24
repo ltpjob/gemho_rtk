@@ -210,10 +210,17 @@ static void *process_DataCollect(void *args)
 
     while(handle->runFlag == 1)
     {
+        QTime tmpTime;
+        int nWaitCT = 2000;
         client.connectToHost(QHostAddress(handle->ip), handle->port.toUShort());
 
-        if(client.waitForConnected(2000) == false)
+        tmpTime.restart();
+        if(client.waitForConnected(nWaitCT) == false)
         {
+            int tDiff = 0;
+            tDiff = nWaitCT-tmpTime.elapsed();
+            if(tDiff>0 && tDiff<nWaitCT)
+                usleep(tDiff*1000);
             if(nPrintflag1 == 0)
             {
                 strlog.sprintf("[%s][%s][%d]ip(%s),port(%s):%s", __FILE__, __func__, __LINE__,
