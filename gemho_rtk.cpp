@@ -314,21 +314,23 @@ static void *process_DataCollect(void *args)
                             {
                                 quint32 id[3] = {};
                                 QString strId;
+                                QByteArray tmpData;
 
-                                readSize = client.read(buffer, head.size);
-                                if(readSize != head.size)
+
+                                tmpData = client.read(head.size);
+                                if(tmpData.size() != head.size)
                                 {
                                     strlog.sprintf("[%s][%s][%d]read DATA fail!", __FILE__, __func__, __LINE__);
                                     mylog->error(strlog);
                                     break;
                                 }
 
-                                memcpy(id, buffer, sizeof(id));
+                                memcpy(id, tmpData.data(), sizeof(id));
                                 strId.sprintf("%08X%08X%08X", id[2], id[1], id[0]);
 
                                 for(QList<void *>::iterator iter = handle->listRtkProcess.begin(); iter != handle->listRtkProcess.end(); iter++)
                                 {
-                                    rtkprocess_pushData(*iter, strId, buffer+sizeof(id), readSize-sizeof(id));
+                                    rtkprocess_pushData(*iter, strId, tmpData.data()+sizeof(id), tmpData.size()-sizeof(id));
                                 }
                                 break;
                             }
@@ -884,8 +886,7 @@ int gemhoRtkProcess(void *pGrtk)
         rtkprocess_getLastProcTime(*iter, &lastPtime);
 
         now = QDateTime::currentDateTime();
-        if(handle->uptime.secsTo(now) >= 60*60 &&
-                now.time().hour() != lastPtime.time().hour())
+        if(now.time().hour() != lastPtime.time().hour())
         {
             rtkprocess_getSolBest(*iter, &bestSol);
 
