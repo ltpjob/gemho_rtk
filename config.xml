@@ -1,7 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <savepath>/home/ltp/GNSS</savepath>
-  <resultpath>/home/ltp/GNSS</resultpath>
+  <resultpath></resultpath>
+  <sendInterval>30</sendInterval>
+  <isSaveDatabase>1</isSaveDatabase>
+  <serialName>/dev/ttyUSB0</serialName>
   <pairs>
     <pair>
       <device>
@@ -9,20 +12,22 @@
         <ip>192.168.88.5</ip>
         <port>5566</port>
         <type>rover</type>
-	<mode>static</mode>
+        <mode>static</mode>
         <lat>37.519403750</lat>
         <lon>122.042180417</lon>
         <height>6.1500</height>
+        <save>0</save>
       </device>
       <device>
         <id>8719512552536752066EFF53</id>
         <ip>192.168.88.6</ip>
         <port>5566</port>
         <type>base</type>
-	<mode>static</mode>
+        <mode>static</mode>
         <lat>37.408400528</lat>
         <lon>122.218363917</lon>
         <height>69.40</height>
+        <save>0</save>
       </device>
     </pair>
   </pairs>

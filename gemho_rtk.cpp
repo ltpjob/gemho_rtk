@@ -14,6 +14,8 @@
 #include "rtkprocess.h"
 #include "bsp_thr.h"
 #include <unistd.h>
+#include <QtEndian>
+#include <QSerialPort>
 
 #pragma pack(1)
 typedef struct tagupComDataHead
@@ -22,6 +24,31 @@ typedef struct tagupComDataHead
     qint16 type;
     qint32 size;
 }upComDataHead;
+
+
+typedef struct tagGemhoGNSSData
+{
+    quint8 isValid;
+    quint32 id[3];
+    qint32 lon;
+    qint32 lat;
+    qint32 height;
+    qint8 quality;
+}GemhoGNSSData;
+
+
+typedef struct tagGemhoGNSSprot
+{
+    quint16 start;
+    quint16 size;
+    quint16 devId;
+    GemhoGNSSData gd[7];
+    quint16 checksum;
+    quint16 end;
+}GemhoGNSSprot;
+
+
+
 #pragma pack()
 
 static int readDevice(QXmlStreamReader *reader, deviceInfo *device)
@@ -44,7 +71,7 @@ static int readDevice(QXmlStreamReader *reader, deviceInfo *device)
     while(!reader->isStartElement() && !reader->atEnd() && !reader->hasError());
     if(reader->name() != "id")
         return -1;
-    device->id = reader->readElementText();
+    device->id = reader->readElementText().toUpper();
 
     do
     {
@@ -109,6 +136,15 @@ static int readDevice(QXmlStreamReader *reader, deviceInfo *device)
         return -1;
     device->height = reader->readElementText();
 
+    do
+    {
+        reader->readNext();
+    }
+    while(!reader->isStartElement() && !reader->atEnd() && !reader->hasError());
+    if(reader->name() != "save")
+        return -1;
+    device->save = reader->readElementText();
+
     return 0;
 }
 
@@ -143,6 +179,24 @@ static int readxml(QList<pairInfo> *list, RtkConfig *rtkcfg)
             if (reader.isStartElement() && reader.name() == "resultpath")
             {
                 rtkcfg->resultPath  = reader.readElementText();
+
+            }
+
+            if (reader.isStartElement() && reader.name() == "sendInterval")
+            {
+                rtkcfg->sendInterval  = reader.readElementText();
+
+            }
+
+            if (reader.isStartElement() && reader.name() == "isSaveDatabase")
+            {
+                rtkcfg->isSaveDatabase  = reader.readElementText();
+
+            }
+
+            if (reader.isStartElement() && reader.name() == "serialName")
+            {
+                rtkcfg->serialName  = reader.readElementText();
 
             }
 
@@ -190,6 +244,10 @@ typedef struct tagGemhoRtk{
     QList<DataCollect *> listDataCollect;
     QSqlDatabase dbDataSave;
     QDateTime uptime;
+    RtkConfig rtkconfig;
+    QList<RtkOutSolution> listDataToSend;
+    int unFullCount;
+    QSerialPort *sendSerial;
 }GemhoRtk;
 
 static void *process_DataCollect(void *args)
@@ -322,6 +380,7 @@ static void *process_DataCollect(void *args)
                                 quint32 id[3] = {};
                                 QString strId;
                                 QByteArray tmpData;
+                                int saveFlag = 1;
 
 
                                 tmpData = client.read(head.size);
@@ -337,7 +396,15 @@ static void *process_DataCollect(void *args)
 
                                 for(QList<void *>::iterator iter = handle->listRtkProcess.begin(); iter != handle->listRtkProcess.end(); iter++)
                                 {
-                                    rtkprocess_pushData(*iter, strId, tmpData.data()+sizeof(id), tmpData.size()-sizeof(id));
+                                    //每个id只存一次
+                                    int isSave = rtkprocess_saveData(*iter, strId);
+                                    if(saveFlag == 0)
+                                        isSave = 0;
+
+                                    if(isSave == 1)
+                                        saveFlag = 0;
+
+                                    rtkprocess_pushData(*iter, strId, tmpData.data()+sizeof(id), tmpData.size()-sizeof(id), isSave);
                                 }
                                 break;
                             }
@@ -474,6 +541,10 @@ void *gemhoRtkStart()
     readxml(&list, &rtkcfg);
 
     handle->uptime = QDateTime::currentDateTime();
+    handle->rtkconfig = rtkcfg;
+    handle->listDataToSend.clear();
+    handle->sendSerial = NULL;
+    handle->unFullCount = 0;
 
     handle->dbDataSave = QSqlDatabase::addDatabase("QMYSQL");
     handle->dbDataSave.setHostName("127.0.0.1");
@@ -679,6 +750,10 @@ void *gemhoRtkStart()
     readxml(&list, &rtkcfg);
 
     handle->uptime = QDateTime::currentDateTime();
+    handle->rtkconfig = rtkcfg;
+    handle->listDataToSend.clear();
+    handle->sendSerial = NULL;
+    handle->unFullCount = 0;
 
     handle->dbDataSave = QSqlDatabase::addDatabase("QMYSQL");
     handle->dbDataSave.setHostName("127.0.0.1");
@@ -869,6 +944,53 @@ void *gemhoRtkStart()
 }
 #endif
 
+int gemhoRtkSendInit(void *pGrtk)
+{
+    GemhoRtk *handle = (GemhoRtk *)pGrtk;
+    QString strlog;
+
+    if(handle == NULL)
+    {
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "gemhoRtkStop handle NULL!");
+        mylog->error(strlog);
+        return -1;
+    }
+    handle->sendSerial = new QSerialPort;
+    handle->sendSerial->close();
+    handle->sendSerial->setPortName(handle->rtkconfig.serialName);
+    if(handle->sendSerial->open(QIODevice::ReadWrite) == false)
+    {
+        strlog.sprintf("[%s][%s][%d]sendSerial err:%s can't open", __FILE__, __func__, __LINE__, handle->rtkconfig.serialName.toStdString().c_str());
+        mylog->error(strlog);
+        return -1;
+    }
+    else
+    {
+        handle->sendSerial->setBaudRate(QSerialPort::Baud115200);
+        handle->sendSerial->setDataBits(QSerialPort::Data8);
+        handle->sendSerial->setParity(QSerialPort::NoParity);
+        handle->sendSerial->setStopBits(QSerialPort::OneStop);
+        handle->sendSerial->setFlowControl(QSerialPort::NoFlowControl);
+    }
+
+    return 0;
+}
+
+static uint16_t CheckSum(const char *data, int len)
+{
+    int i;
+    uint16_t checksum = 0;
+
+    for(i=0; i<len; i++)
+    {
+        checksum += data[i];
+    }
+
+    checksum = (~checksum) + 1;
+    return checksum;
+}
+
+
 int gemhoRtkProcess(void *pGrtk)
 {
     GemhoRtk *handle = (GemhoRtk *)pGrtk;
@@ -893,7 +1015,8 @@ int gemhoRtkProcess(void *pGrtk)
         rtkprocess_getLastProcTime(*iter, &lastPtime);
 
         now = QDateTime::currentDateTime();
-        if(now.time().hour() != lastPtime.time().hour())
+//        if(now.time().hour() != lastPtime.time().hour())
+        if(lastPtime.msecsTo(now)/1000 >= handle->rtkconfig.sendInterval.toInt())
         {
             rtkprocess_getSolBest(*iter, &bestSol);
 
@@ -918,9 +1041,66 @@ int gemhoRtkProcess(void *pGrtk)
                 bestSol.baseline = "0";
             }
 
-            gemhoRtkDataInsert(handle, bestSol);
+            if(handle->rtkconfig.isSaveDatabase.toInt() == 1)
+            {
+                gemhoRtkDataInsert(handle, bestSol);
+            }
+
+            handle->listDataToSend.push_back(bestSol);
             rtkprocess_resetBestSol(*iter);
             rtkprocess_setLastProcTime(*iter, QDateTime::currentDateTime());
+        }
+    }
+
+    if(handle->listDataToSend.isEmpty() == false)
+    {
+        GemhoGNSSprot ggp;
+        unsigned int count = 0;
+
+        if(handle->listDataToSend.size() >= (int)(sizeof(ggp.gd)/sizeof(ggp.gd[0])) || handle->unFullCount >= 30)
+        {
+            memset(&ggp, 0, sizeof(ggp));
+            ggp.start = qToBigEndian<quint16>(0xa55a);
+            ggp.size = sizeof(ggp.devId)+sizeof(ggp.gd);
+            ggp.devId = qToBigEndian<quint16>(0x5003);
+
+            for(QList<RtkOutSolution>::iterator iter=handle->listDataToSend.begin(); iter!=handle->listDataToSend.end(); iter++)
+            {
+                ggp.gd[count].isValid = 1;
+                ggp.gd[count].id[0] = qToBigEndian<quint32>((*iter).id.mid(0, 8).toUInt(Q_NULLPTR, 16));
+                ggp.gd[count].id[1] = qToBigEndian<quint32>((*iter).id.mid(8, 8).toUInt(Q_NULLPTR, 16));
+                ggp.gd[count].id[2] = qToBigEndian<quint32>((*iter).id.mid(16).toUInt(Q_NULLPTR, 16));
+                ggp.gd[count].lat = qToBigEndian<qint32>((*iter).latitude.toDouble()*10000000);
+                ggp.gd[count].lon = qToBigEndian<qint32>((*iter).longitude.toDouble()*10000000);
+                ggp.gd[count].height = qToBigEndian<qint32>((*iter).height.toDouble()*10000);
+//                qDebug("latitude:%d %lf\n", (int)((*iter).latitude.toDouble()*10000000), (*iter).latitude.toDouble());
+//                qDebug("longitude:%d %lf\n", (int)((*iter).longitude.toDouble()*10000000), (*iter).longitude.toDouble());
+//                qDebug("height:%d %lf\n", (int)((*iter).height.toDouble()*10000), (*iter).height.toDouble());
+                ggp.gd[count].quality = (*iter).Q.toInt();
+                handle->listDataToSend.erase(iter);
+
+                count++;
+                if(count >= sizeof(ggp.gd)/sizeof(ggp.gd[0]))
+                    break;
+            }
+
+            ggp.checksum = CheckSum((const char *)ggp.gd, sizeof(ggp.gd));
+            ggp.end = qToBigEndian<quint16>(0x0d0a);
+            if(handle->sendSerial != NULL)
+            {
+                if(handle->sendSerial->isOpen() == true)
+                {
+//                    qDebug("%lu %lu\n", sizeof(ggp), sizeof(ggp.gd)/sizeof(ggp.gd[0]));
+                    handle->sendSerial->write((const char *)&ggp, sizeof(ggp));
+                }
+            }
+
+            handle->unFullCount = 0;
+
+        }
+        else
+        {
+            handle->unFullCount++;
         }
     }
 

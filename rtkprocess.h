@@ -34,7 +34,9 @@ void *rtkprocess_create(pairInfo *pInfo, prcopt_t *prcopt, solopt_t *solopt, Rtk
 
 int rtkprocess_destory(void *hRtk);
 
-int rtkprocess_pushData(void *hRtk, QString id, char *data, int size);
+int rtkprocess_saveData(void *hRtk, QString id);
+
+int rtkprocess_pushData(void *hRtk, QString id, char *data, int size, int isSave);
 
 int rtkprocess_process(void *hRtk);
 

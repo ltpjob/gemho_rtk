@@ -712,7 +712,28 @@ int rtkprocess_destory(void *hRtk)
     return 0;
 }
 
-int rtkprocess_pushData(void *hRtk, QString id, char *data, int size)
+int rtkprocess_saveData(void *hRtk, QString id)
+{
+    RtkPocHandle *handle = (RtkPocHandle *)hRtk;
+    QString strlog;
+    int ret = -1;
+
+    if(handle == NULL)
+    {
+        strlog.sprintf("[%s][%s][%d]%s", __FILE__, __func__, __LINE__, "rtkprocess_pushData NULL handle!!!!!!!");
+        mylog->error(strlog);
+        return ret;
+    }
+
+    if(handle->pInfo.device[0].id == id)
+        ret = handle->pInfo.device[0].save.toInt();
+    else if(handle->pInfo.device[1].id == id)
+        ret = handle->pInfo.device[1].save.toInt();
+
+    return ret;
+}
+
+int rtkprocess_pushData(void *hRtk, QString id, char *data, int size, int isSave)
 {
     RtkPocHandle *handle = (RtkPocHandle *)hRtk;
     QString strlog;
@@ -730,7 +751,7 @@ int rtkprocess_pushData(void *hRtk, QString id, char *data, int size)
     {
         QString str;
 
-        if(handle->rtkconfig.savePath != "")
+        if(handle->rtkconfig.savePath != "" && isSave == 1)
         {
             QDir dir;
 

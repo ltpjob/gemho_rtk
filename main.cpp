@@ -11,18 +11,31 @@
 #include <unistd.h>
 #include "gemho_rtk.h"
 #include "bsp_thr.h"
+#include <QThread>
+#include <QSerialPort>
 
-void *process(void *args)
+class processThread: public QThread
 {
-    void *handle = args;
+public:
+    processThread(void *handle);
+    void run(); //声明继承于QThread虚函数 run()
+private:
+    void *m_handle;
+};
 
+processThread::processThread(void *handle)
+{
+    m_handle = handle;
+}
+void processThread::run()
+{
+    gemhoRtkSendInit(m_handle);
     while(1)
     {
-        gemhoRtkProcess(handle);
+        gemhoRtkProcess(m_handle);
+        QCoreApplication::processEvents();
         usleep(100*1000);
     }
-
-    return NULL;
 }
 
 void *process_main(void *args)
@@ -32,8 +45,8 @@ void *process_main(void *args)
     traceclose();
 //    traceopen(".//debug.txt");
 
-    pthread_t pid;
-    pthread_create(&pid, NULL, process, handle);
+    processThread proThread(handle);
+    proThread.start();
 
     while(1)
     {

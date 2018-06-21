@@ -16,6 +16,7 @@ typedef struct tagDeviceInfo{
     QString lat;
     QString lon;
     QString height;
+    QString save;
 }deviceInfo;
 
 typedef struct tagPairInfo{
@@ -25,9 +26,13 @@ typedef struct tagPairInfo{
 typedef struct tagRtkConfig{
     QString savePath;
     QString resultPath;
+    QString sendInterval;
+    QString isSaveDatabase;
+    QString serialName;
 }RtkConfig;
 
 void *gemhoRtkStart();
+int gemhoRtkSendInit(void *pGrtk);
 int gemhoRtkProcess(void *pGrtk);
 int gemhoRtkStop(void *pGrtk);
 
