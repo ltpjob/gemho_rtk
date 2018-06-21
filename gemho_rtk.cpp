@@ -976,10 +976,10 @@ int gemhoRtkSendInit(void *pGrtk)
     return 0;
 }
 
-static uint16_t CheckSum(const char *data, int len)
+static quint16 CheckSum(const char *data, int len)
 {
     int i;
-    uint16_t checksum = 0;
+    quint16 checksum = 0;
 
     for(i=0; i<len; i++)
     {
