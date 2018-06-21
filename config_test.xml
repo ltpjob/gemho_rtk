@@ -9,7 +9,7 @@
     <pair>
       <device>
         <id>12345678abcdefab00000001</id>
-        <ip>127.0.0.1</ip>
+        <ip>192.168.100.236</ip>
         <port>5887</port>
         <type>rover</type>
         <mode>static</mode>
@@ -20,7 +20,7 @@
       </device>
       <device>
         <id>12345678abcdefab00000000</id>
-        <ip>127.0.0.1</ip>
+        <ip>192.168.100.236</ip>
         <port>5886</port>
         <type>base</type>
         <mode>static</mode>
@@ -35,7 +35,7 @@
     <pair>
       <device>
         <id>12345678abcdefab00000002</id>
-        <ip>127.0.0.1</ip>
+        <ip>192.168.100.236</ip>
         <port>5888</port>
         <type>rover</type>
         <mode>static</mode>
@@ -46,7 +46,7 @@
       </device>
       <device>
         <id>12345678abcdefab00000000</id>
-        <ip>127.0.0.1</ip>
+        <ip>192.168.100.236</ip>
         <port>5886</port>
         <type>base</type>
         <mode>static</mode>
@@ -61,7 +61,7 @@
     <pair>
       <device>
         <id>12345678abcdefab00000003</id>
-        <ip>127.0.0.1</ip>
+        <ip>192.168.100.236</ip>
         <port>5889</port>
         <type>rover</type>
         <mode>static</mode>
@@ -72,7 +72,7 @@
       </device>
       <device>
         <id>12345678abcdefab00000000</id>
-        <ip>127.0.0.1</ip>
+        <ip>192.168.100.236</ip>
         <port>5886</port>
         <type>base</type>
         <mode>static</mode>
@@ -87,7 +87,7 @@
     <pair>
       <device>
         <id>12345678abcdefab00000004</id>
-        <ip>127.0.0.1</ip>
+        <ip>192.168.100.236</ip>
         <port>5890</port>
         <type>rover</type>
         <mode>static</mode>
@@ -98,7 +98,137 @@
       </device>
       <device>
         <id>12345678abcdefab00000000</id>
-        <ip>127.0.0.1</ip>
+        <ip>192.168.100.236</ip>
+        <port>5886</port>
+        <type>base</type>
+        <mode>static</mode>
+        <lat>37.408400528</lat>
+        <lon>122.218363917</lon>
+        <height>69.40</height>
+        <save>0</save>
+      </device>
+    </pair>
+  </pairs>
+  <pairs>
+    <pair>
+      <device>
+        <id>12345678abcdefab00000005</id>
+        <ip>192.168.100.236</ip>
+        <port>5891</port>
+        <type>rover</type>
+        <mode>static</mode>
+        <lat>37.519403750</lat>
+        <lon>122.042180417</lon>
+        <height>6.1500</height>
+        <save>0</save>
+      </device>
+      <device>
+        <id>12345678abcdefab00000000</id>
+        <ip>192.168.100.236</ip>
+        <port>5886</port>
+        <type>base</type>
+        <mode>static</mode>
+        <lat>37.408400528</lat>
+        <lon>122.218363917</lon>
+        <height>69.40</height>
+        <save>0</save>
+      </device>
+    </pair>
+  </pairs>
+  <pairs>
+    <pair>
+      <device>
+        <id>12345678abcdefab00000006</id>
+        <ip>192.168.100.236</ip>
+        <port>5892</port>
+        <type>rover</type>
+        <mode>static</mode>
+        <lat>37.519403750</lat>
+        <lon>122.042180417</lon>
+        <height>6.1500</height>
+        <save>0</save>
+      </device>
+      <device>
+        <id>12345678abcdefab00000000</id>
+        <ip>192.168.100.236</ip>
+        <port>5886</port>
+        <type>base</type>
+        <mode>static</mode>
+        <lat>37.408400528</lat>
+        <lon>122.218363917</lon>
+        <height>69.40</height>
+        <save>0</save>
+      </device>
+    </pair>
+  </pairs>
+  <pairs>
+    <pair>
+      <device>
+        <id>12345678abcdefab00000007</id>
+        <ip>192.168.100.236</ip>
+        <port>5893</port>
+        <type>rover</type>
+        <mode>static</mode>
+        <lat>37.519403750</lat>
+        <lon>122.042180417</lon>
+        <height>6.1500</height>
+        <save>0</save>
+      </device>
+      <device>
+        <id>12345678abcdefab00000000</id>
+        <ip>192.168.100.236</ip>
+        <port>5886</port>
+        <type>base</type>
+        <mode>static</mode>
+        <lat>37.408400528</lat>
+        <lon>122.218363917</lon>
+        <height>69.40</height>
+        <save>0</save>
+      </device>
+    </pair>
+  </pairs>
+  <pairs>
+    <pair>
+      <device>
+        <id>12345678abcdefab00000008</id>
+        <ip>192.168.100.236</ip>
+        <port>5894</port>
+        <type>rover</type>
+        <mode>static</mode>
+        <lat>37.519403750</lat>
+        <lon>122.042180417</lon>
+        <height>6.1500</height>
+        <save>0</save>
+      </device>
+      <device>
+        <id>12345678abcdefab00000000</id>
+        <ip>192.168.100.236</ip>
+        <port>5886</port>
+        <type>base</type>
+        <mode>static</mode>
+        <lat>37.408400528</lat>
+        <lon>122.218363917</lon>
+        <height>69.40</height>
+        <save>0</save>
+      </device>
+    </pair>
+  </pairs>
+  <pairs>
+    <pair>
+      <device>
+        <id>12345678abcdefab00000009</id>
+        <ip>192.168.100.236</ip>
+        <port>5895</port>
+        <type>rover</type>
+        <mode>static</mode>
+        <lat>37.519403750</lat>
+        <lon>122.042180417</lon>
+        <height>6.1500</height>
+        <save>0</save>
+      </device>
+      <device>
+        <id>12345678abcdefab00000000</id>
+        <ip>192.168.100.236</ip>
         <port>5886</port>
         <type>base</type>
         <mode>static</mode>
